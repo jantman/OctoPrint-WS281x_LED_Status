@@ -9,9 +9,10 @@ from queue import Queue
 
 # noinspection PyPackageRequirements
 from octoprint.logging.handlers import CleaningTimedRotatingFileHandler
-from rpi_ws281x import PixelStrip
 
 from octoprint_ws281x_led_status import constants
+from octoprint_ws281x_led_status.backend import LEDBackend
+from octoprint_ws281x_led_status.backend.factory import create_backend
 from octoprint_ws281x_led_status.effects import error_handled_effect
 from octoprint_ws281x_led_status.runner import segments
 from octoprint_ws281x_led_status.runner import timer as active_times
@@ -95,7 +96,7 @@ class EffectRunner:
 
             self.queue = queue  # type: multiprocessing.Queue
             try:
-                self.strip = self.start_strip()  # type: PixelStrip
+                self.strip = self.start_strip()  # type: LEDBackend
             except (StripFailedError, segments.InvalidSegmentError):
                 self._logger.error("Exiting the effect process")
                 return
@@ -422,22 +423,21 @@ class EffectRunner:
 
     def start_strip(self):
         """
-        Start PixelStrip and SegmentManager object
-        :returns strip: (rpi_ws281x.PixelStrip) The initialised strip object
+        Start LED backend and SegmentManager object
+
+        :returns strip: (LEDBackend) The initialised backend object
         """
+        # TODO: In Milestone 2, backend name will come from settings
+        # For now, hardcode to rpi_ws281x to maintain backward compatibility
+        backend_name = "rpi_ws281x"
+
         try:
-            strip = PixelStrip(
-                num=int(self.strip_settings["count"]),
-                pin=int(self.strip_settings["pin"]),
-                freq_hz=int(self.strip_settings["freq_hz"]),
-                dma=int(self.strip_settings["dma"]),
-                invert=bool(self.strip_settings["invert"]),
-                brightness=int(self.strip_settings["brightness"]),
-                channel=int(self.strip_settings["channel"]),
-                strip_type=constants.STRIP_TYPES[self.strip_settings["type"]],
-            )
+            # Create backend using factory
+            strip = create_backend(backend_name, self.strip_settings)
             strip.begin()
-        except Exception as e:  # Probably wrong settings...
+
+            self._logger.info(f"Initialized LED backend: {backend_name}")
+        except Exception as e:  # Probably wrong settings or backend unavailable
             self._logger.error(repr(e))
             self._logger.error("Strip failed to startup")
             raise StripFailedError("Error initializing strip") from e
