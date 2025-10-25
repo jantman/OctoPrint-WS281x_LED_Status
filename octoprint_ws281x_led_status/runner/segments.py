@@ -17,7 +17,7 @@ class SegmentManager:
         segments: List[Dict[str, Any]] = []
         for segment_config in self.settings:
             segment = {
-                "id": len(self.segments) + 1,  # Check order is guaranteed...
+                "id": len(segments) + 1,  # Check order is guaranteed...
                 "class": StripSegment(
                     self.strip, segment_config["start"], end=segment_config["end"]
                 ),

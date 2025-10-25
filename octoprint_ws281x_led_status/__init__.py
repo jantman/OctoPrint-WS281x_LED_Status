@@ -852,3 +852,6 @@ def __plugin_load__():
         "octoprint.comm.protocol.temperatures.received": __plugin_implementation__.temperatures_received,
         "octoprint.comm.protocol.atcommand.sending": __plugin_implementation__.process_at_command,
     }
+
+from . import _version
+__version__ = _version.get_versions()['version']
