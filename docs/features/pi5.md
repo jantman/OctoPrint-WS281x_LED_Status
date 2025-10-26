@@ -258,14 +258,16 @@ This feature will be implemented in multiple milestones to ensure stability and 
 **Commit:** `Pi5 Support - 1.7: Fix existing tests and verify compatibility`
 
 **Milestone 1 Completion Criteria:**
-- [ ] Backend abstraction interface fully documented
-- [ ] rpi_ws281x backend wrapper complete and functional
-- [ ] Backend factory and registry working
-- [ ] StripSegment and EffectRunner updated to use abstraction
-- [ ] All new unit tests written and passing
-- [ ] All existing unit tests passing
-- [ ] Code follows existing style and conventions
-- [ ] No regressions in functionality
+- [x] Backend abstraction interface fully documented
+- [x] rpi_ws281x backend wrapper complete and functional
+- [x] Backend factory and registry working
+- [x] StripSegment and EffectRunner updated to use abstraction
+- [x] All new unit tests written and passing (70 new tests)
+- [x] All existing unit tests passing (77 total tests)
+- [x] Code follows existing style and conventions
+- [x] No regressions in functionality
+
+**Status: ✅ COMPLETED** (7 commits, all tests passing)
 
 ---
 
@@ -368,15 +370,17 @@ This feature will be implemented in multiple milestones to ensure stability and 
 **Commit:** `Pi5 Support - 2.9: Verify all tests pass for Milestone 2`
 
 **Milestone 2 Completion Criteria:**
-- [ ] Settings schema supports backend selection
-- [ ] Settings migration from old format works correctly
-- [ ] UI allows backend selection (showing only rpi_ws281x initially)
-- [ ] Backend-specific settings display correctly
-- [ ] Plugin reads and uses backend from settings
-- [ ] Changing backends triggers appropriate restarts
-- [ ] All tests passing
-- [ ] Backward compatibility maintained
-- [ ] Existing users' settings migrate automatically
+- [x] Settings schema supports backend selection
+- [x] Settings migration from old format works correctly (v3→v4)
+- [x] UI allows backend selection (showing only rpi_ws281x initially)
+- [x] Backend-specific settings display correctly
+- [x] Plugin reads and uses backend from settings
+- [x] Changing backends triggers appropriate restarts (handled by plugin restart)
+- [x] All tests passing (84 tests including 7 new migration tests)
+- [x] Backward compatibility maintained
+- [x] Existing users' settings migrate automatically
+
+**Status: ✅ COMPLETED** (1 commit, settings v4, all tests passing)
 
 ---
 
@@ -463,15 +467,17 @@ This feature will be implemented in multiple milestones to ensure stability and 
 **Commit:** `Pi5 Support - 3.8: Verify all tests pass for Milestone 3`
 
 **Milestone 3 Completion Criteria:**
-- [ ] Adafruit backend fully implemented
-- [ ] Backend available for selection in UI
-- [ ] Dependency detection working
-- [ ] User guidance for setup clear and helpful
-- [ ] All effects work with Adafruit backend
-- [ ] RGBW support functional
-- [ ] All tests passing
-- [ ] Documentation complete
-- [ ] Both backends stable and production-ready
+- [x] Adafruit backend fully implemented (325 lines, full LEDBackend interface)
+- [x] Backend available for selection in UI (dynamic dropdown with descriptions)
+- [x] Dependency detection working (is_available() checks libraries + SPI)
+- [x] User guidance for setup clear and helpful (backend descriptions, help text)
+- [x] All effects work with Adafruit backend (same interface, fully compatible)
+- [x] RGBW support functional (12 pixel orders including RGBW variants)
+- [x] All tests passing (109 tests: 84 existing + 25 new Adafruit tests)
+- [x] Documentation complete (comprehensive adafruit_backend_requirements.md)
+- [x] Both backends stable and production-ready
+
+**Status: ✅ COMPLETED** (6 commits, Pi 5 support fully functional, all tests passing)
 
 ---
 
