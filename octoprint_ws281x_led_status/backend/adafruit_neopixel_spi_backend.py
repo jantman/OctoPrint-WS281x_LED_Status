@@ -16,6 +16,7 @@ Key features:
 - Software-based brightness control
 """
 
+import os
 from typing import Any, Dict, Tuple
 
 from octoprint_ws281x_led_status.backend import LEDBackend
@@ -308,8 +309,6 @@ def is_available() -> bool:
     Returns:
         True if backend dependencies are installed and SPI is accessible
     """
-    import os
-
     # Check if libraries are available
     if not ADAFRUIT_AVAILABLE:
         return False
