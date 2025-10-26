@@ -2,8 +2,9 @@
 {% import "macros/docs.jinja2" as docs with context %}
 
 {% macro strip_binding(setting) %}{{ binding.bind_setting("strip." + setting) }}{% endmacro %}
+{% macro backend_binding(setting) %}{{ binding.bind_setting("backend.config." + setting) }}{% endmacro %}
 
-{% macro number_input(setting, min="", max="", append=None) %}
+{% macro number_input(setting, min="", max="", append=None, binding_macro=strip_binding) %}
     {% if append %}
         <div class="input-append">
     {% endif %}
@@ -12,7 +13,7 @@
             class="input-block-level"
             min="{{ min }}"
             max="{{ max }}"
-            data-bind="value: {{ strip_binding(setting) }}"
+            data-bind="value: {{ binding_macro(setting) }}"
         >
     {% if append %}
         <span class="add-on">{{ append }}</span>
@@ -20,12 +21,12 @@
     {% endif %}
 {% endmacro %}
 
-{% macro slider_input(setting, min=0, max=100) %}
+{% macro slider_input(setting, min=0, max=100, binding_macro=strip_binding) %}
 <input
     type="range"
     min="{{ min }}"
     max="{{ max }}"
-    data-bind="value: {{ strip_binding(setting) }}"
+    data-bind="value: {{ binding_macro(setting) }}"
     class="input-block-level"
 >
 {% endmacro %}
@@ -46,11 +47,21 @@
     </div>
     <div class="modal-body">
         <form class="form-horizontal">
+            <h5>Backend Settings</h5>
+            <div class="row-fluid">
+                {{ control_label("Backend Type") }}
+                <div class="span8">
+                    <select class="input-block-level" id="backendType" data-bind="value: {{ binding.bind_setting("backend.type") }}">
+                        <option value="rpi_ws281x">rpi_ws281x (SPI)</option>
+                    </select>
+                </div>
+            </div>
+            <br>
             <h5>Strip Settings</h5>
             <div class="row-fluid">
                 {{ control_label("Strip Type") }}
                 <div class="span8">
-                    <select class="input-block-level" id="stripType" data-bind="value: {{ strip_binding("type") }}">
+                    <select class="input-block-level" id="stripType" data-bind="value: {{ backend_binding("type") }}">
                         {% for type in plugin_ws281x_led_status_strip_types %}
                         <option value="{{ type }}">{{ type }}</option>
                         {% endfor %}
@@ -61,24 +72,24 @@
             <div class="row-fluid">
                 {{ control_label("Number of LEDs") }}
                 <div class="span4">
-                    {{ number_input("count", 0) }}
+                    {{ number_input("count", 0, binding_macro=backend_binding) }}
                 </div>
             </div>
             <br>
             <div class="row-fluid">
                 {{ control_label("Max Brightness") }}
                 <div class="span4">
-                    {{ number_input("brightness", 0, 100, "%") }}
+                    {{ number_input("brightness", 0, 100, "%", binding_macro=backend_binding) }}
                 </div>
                 <div class="span4">
-                    {{ slider_input("brightness", 0, 100) }}
+                    {{ slider_input("brightness", 0, 100, binding_macro=backend_binding) }}
                 </div>
             </div>
             <br>
             <div class="row-fluid">
                 {{ control_label("GPIO Pin") }}
                 <div class="span4">
-                    {{ number_input("pin", 10, 10) }}
+                    {{ number_input("pin", 10, 10, binding_macro=backend_binding) }}
                 </div>
             </div>
             <h5>{{ _("Color Correction Settings") }}</h5>
@@ -143,14 +154,14 @@
                 <div class="row-fluid">
                     {{ control_label("Frequency") }}
                     <div class="span4">
-                        {{ number_input("freq_hz", append="hz") }}
+                        {{ number_input("freq_hz", append="hz", binding_macro=backend_binding) }}
                     </div>
                 </div>
                 <br>
                 <div class="row-fluid">
                     {{ control_label("Invert Pin output") }}
                     <div class="span4">
-                        <input type="checkbox" data-bind="checked: {{ strip_binding("invert") }}">
+                        <input type="checkbox" data-bind="checked: {{ backend_binding("invert") }}">
                     </div>
                 </div>
                 <br>

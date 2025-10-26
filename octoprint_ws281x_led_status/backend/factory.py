@@ -192,6 +192,18 @@ def register_backend(
     _registry.register(name, backend_class, display_name, description)
 
 
+def get_available_backends() -> Dict[str, Dict[str, Any]]:
+    """
+    Get all available backends with their metadata.
+
+    Returns a dictionary mapping backend names to their metadata (display_name, description).
+
+    Returns:
+        Dictionary of backend names to metadata dicts
+    """
+    return _registry.list_backends()
+
+
 # Register built-in backends
 register_backend(
     "rpi_ws281x",

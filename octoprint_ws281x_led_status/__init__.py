@@ -14,6 +14,7 @@ from octoprint.events import Events, all_events
 from octoprint.util.version import is_octoprint_compatible
 
 from octoprint_ws281x_led_status import api, constants, settings, triggers, util, wizard
+from octoprint_ws281x_led_status.backend.factory import get_available_backends
 from octoprint_ws281x_led_status.constants import AtCommands, DeprecatedAtCommands
 from octoprint_ws281x_led_status.runner import EffectRunner
 from octoprint_ws281x_led_status.util import RestartableTimer
@@ -166,6 +167,7 @@ class WS281xLedStatusPlugin(
             "progress_names": constants.PROGRESS_EFFECTS.keys(),
             "pi_model": PI_MODEL,
             "strip_types": constants.STRIP_TYPES,
+            "backends": get_available_backends(),
             "timezone": util.get_timezone(),
             "version": self._plugin_version,
             "is_docker": os.path.exists(os.path.join("/bin", "s6-svscanctl"))
@@ -292,6 +294,7 @@ class WS281xLedStatusPlugin(
                 "debug": self._settings.get_boolean(["features", "debug_logging"]),
                 "queue": self.effect_queue,
                 "strip_settings": self._settings.get(["strip"], merged=True),
+                "backend_settings": self._settings.get(["backend"], merged=True),
                 "effect_settings": self._settings.get(["effects"], merged=True),
                 "features_settings": self._settings.get(["features"], merged=True),
                 "previous_state": self.current_state,

@@ -34,6 +34,7 @@ class EffectRunner:
         debug,
         queue,
         strip_settings,
+        backend_settings,
         effect_settings,
         features_settings,
         previous_state,
@@ -53,12 +54,13 @@ class EffectRunner:
 
             # Save settings to class
             self.strip_settings = strip_settings
+            self.backend_settings = backend_settings
             self.effect_settings = effect_settings
             self.features_settings = features_settings
             self.active_times_settings = features_settings["active_times"]
             self.transition_settings = features_settings["transitions"]
             self.max_brightness = int(
-                round((float(strip_settings["brightness"]) / 100) * 255)
+                round((float(backend_settings["config"]["brightness"]) / 100) * 255)
             )
             self.color_correction = {
                 "red": self.strip_settings["adjustment"]["R"],
@@ -73,19 +75,19 @@ class EffectRunner:
             self.segment_settings = []
 
             # Sacrificial pixel offsets by one
-            default_segment = {"start": 0, "end": int(self.strip_settings["count"])}
+            default_segment = {"start": 0, "end": int(self.backend_settings["config"]["count"])}
             if self.features_settings["sacrifice_pixel"]:
                 default_segment["start"] = 1
 
             self.segment_settings.append(default_segment)
 
-            if int(self.strip_settings["count"]) < 6:
+            if int(self.backend_settings["config"]["count"]) < 6:
                 self._logger.info("Applying < 6 LED flickering bug workaround")
                 # rpi_ws281x will think we want 6 LEDs, but we will only use those configured
                 # this works around issues where LEDs would show the wrong colour, flicker and more
                 # when used with less than 6 LEDs.
                 # See #132 for details
-                self.strip_settings["count"] = 6
+                self.backend_settings["config"]["count"] = 6
 
             # State holders
             self.lights_on = saved_lights_on
@@ -427,13 +429,13 @@ class EffectRunner:
 
         :returns strip: (LEDBackend) The initialised backend object
         """
-        # TODO: In Milestone 2, backend name will come from settings
-        # For now, hardcode to rpi_ws281x to maintain backward compatibility
-        backend_name = "rpi_ws281x"
+        # Get backend type from settings
+        backend_name = self.backend_settings.get("type", "rpi_ws281x")
+        backend_config = self.backend_settings.get("config", {})
 
         try:
             # Create backend using factory
-            strip = create_backend(backend_name, self.strip_settings)
+            strip = create_backend(backend_name, backend_config)
             strip.begin()
 
             self._logger.info(f"Initialized LED backend: {backend_name}")
