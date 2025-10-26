@@ -276,7 +276,7 @@ class TestFactoryFunctions(unittest.TestCase):
         self.assertTrue(registry.is_registered("rpi_ws281x"))
 
         metadata = registry.get_metadata("rpi_ws281x")
-        self.assertIn("SPI", metadata["display_name"])
+        self.assertIn("PWM", metadata["display_name"])
 
 
 if __name__ == "__main__":
