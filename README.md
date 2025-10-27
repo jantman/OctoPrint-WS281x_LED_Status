@@ -11,12 +11,13 @@ Add some RGB LEDs to your 3D printer for a quick status update!
 
 ![rainbow effect](/assets/rainbow.gif)
 
-A highly configurable yet easy to use plugin for attaching WS2811, WS2812 and SK6812 or LEDs to your Raspberry Pi for a printer status update!
+A highly configurable yet easy to use plugin for attaching WS2811, WS2812 and SK6812 LEDs to your Raspberry Pi (including Raspberry Pi 5!) for a printer status update!
 
 With lots of options effects and integrations to choose from, you can customise the plugin to do things _exactly_ as you want them.
 
 Most prominent features include:
 
+-   **Raspberry Pi 5 support** with multiple LED control backends to choose from
 -   Printer status effects
 -   Tracking heating, printing and cooling progress
 -   Intercepting M150 commands & controlling with @ commands
@@ -36,10 +37,12 @@ You can take a look at the [documentation](https://cp2004.gitbook.io/ws281x-led-
 Setting up the plugin couldn't be easier! There are 3 main steps, with configuration made easy with the setup wizard.
 
 -   Wiring your LEDs
--   Configuring SPI
+-   Choosing and configuring an LED control backend (rpi_ws281x for Pi 3/4, Adafruit CircuitPython for Pi 5)
 -   Configuring plugin settings
 
 Follow the detailed [setup guide](https://cp2004.gitbook.io/ws281x-led-status/guides/setup-guide-1) in the documentation to get up and running.
+
+**Note for Raspberry Pi 5 users:** This plugin now supports Pi 5 using the Adafruit CircuitPython NeoPixel SPI backend. See the documentation for setup instructions specific to Pi 5.
 
 ## Getting help
 
