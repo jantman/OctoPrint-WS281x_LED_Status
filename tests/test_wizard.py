@@ -1,5 +1,8 @@
-# import unittest
-#
+import unittest
+from unittest import mock
+
+from octoprint_ws281x_led_status.wizard import PluginWizard
+
 # import mock
 #
 # from .util import setup_mock_popen
@@ -207,39 +210,106 @@
 #         m.assert_not_called()
 #         self.assertTrue(is_set)
 #
-#     def test_core_freq_min(self):
-#         from octoprint_ws281x_led_status.wizard import is_core_freq_min_set
 #
-#         # Test Pi 4 without string
-#         with mock.patch(
-#             OPEN_SIGNATURE,
-#             mock.mock_open(read_data=CONFIG_TXT),
-#             create=True,
-#         ) as m:
-#             is_set = is_core_freq_min_set("4")
-#
-#         m.assert_called_once_with("/boot/config.txt")
-#         self.assertFalse(is_set)
-#
-#         # Test Pi 4 with string
-#         with mock.patch(
-#             OPEN_SIGNATURE,
-#             mock.mock_open(read_data=CONFIG_TXT + CORE_FREQ_MIN_500),
-#             create=True,
-#         ) as m:
-#             is_set = is_core_freq_min_set("4")
-#
-#         m.assert_called_once_with("/boot/config.txt")
-#         self.assertTrue(is_set)
-#
-#         # Test Pi 3
-#         with mock.patch(
-#             OPEN_SIGNATURE,
-#             mock.mock_open(read_data=CONFIG_TXT),
-#             create=True,
-#         ) as m:
-#             is_set = is_core_freq_min_set("3")
-#
-#         m.assert_not_called()
-#         self.assertTrue(is_set)
-#
+
+
+class TestWizardBackendRecommendation(unittest.TestCase):
+    """Test backend recommendation logic in wizard"""
+
+    @mock.patch("octoprint_ws281x_led_status.wizard.get_registry")
+    def test_pi5_recommends_adafruit_when_available(self, mock_get_registry):
+        """Pi 5 should recommend Adafruit backend when available"""
+        # Mock registry to return both backends
+        mock_registry = mock.Mock()
+        mock_registry.list_backends.return_value = [
+            "rpi_ws281x",
+            "adafruit_neopixel_spi",
+        ]
+        mock_get_registry.return_value = mock_registry
+
+        wizard = PluginWizard(pi_model="5")
+        recommendation = wizard.get_backend_recommendation()
+
+        self.assertEqual(recommendation["pi_model"], "5")
+        self.assertEqual(recommendation["recommended_backend"], "adafruit_neopixel_spi")
+        self.assertIsNone(recommendation["alternative"])
+        self.assertIn("Raspberry Pi 5", recommendation["reason"])
+
+    @mock.patch("octoprint_ws281x_led_status.wizard.get_registry")
+    def test_pi5_warns_when_adafruit_unavailable(self, mock_get_registry):
+        """Pi 5 should warn when Adafruit backend is not available"""
+        # Mock registry to return only rpi_ws281x
+        mock_registry = mock.Mock()
+        mock_registry.list_backends.return_value = ["rpi_ws281x"]
+        mock_get_registry.return_value = mock_registry
+
+        wizard = PluginWizard(pi_model="5")
+        recommendation = wizard.get_backend_recommendation()
+
+        self.assertEqual(recommendation["pi_model"], "5")
+        self.assertIsNone(recommendation["recommended_backend"])
+        self.assertIn("not installed", recommendation["reason"])
+
+    @mock.patch("octoprint_ws281x_led_status.wizard.get_registry")
+    def test_pi4_recommends_rpi_ws281x(self, mock_get_registry):
+        """Pi 4 should recommend rpi_ws281x backend"""
+        # Mock registry to return both backends
+        mock_registry = mock.Mock()
+        mock_registry.list_backends.return_value = [
+            "rpi_ws281x",
+            "adafruit_neopixel_spi",
+        ]
+        mock_get_registry.return_value = mock_registry
+
+        wizard = PluginWizard(pi_model="4")
+        recommendation = wizard.get_backend_recommendation()
+
+        self.assertEqual(recommendation["pi_model"], "4")
+        self.assertEqual(recommendation["recommended_backend"], "rpi_ws281x")
+        self.assertEqual(recommendation["alternative"], "adafruit_neopixel_spi")
+        self.assertIn("works best with", recommendation["reason"])
+
+    @mock.patch("octoprint_ws281x_led_status.wizard.get_registry")
+    def test_pi3_recommends_rpi_ws281x(self, mock_get_registry):
+        """Pi 3 should recommend rpi_ws281x backend"""
+        # Mock registry to return only rpi_ws281x
+        mock_registry = mock.Mock()
+        mock_registry.list_backends.return_value = ["rpi_ws281x"]
+        mock_get_registry.return_value = mock_registry
+
+        wizard = PluginWizard(pi_model="3")
+        recommendation = wizard.get_backend_recommendation()
+
+        self.assertEqual(recommendation["pi_model"], "3")
+        self.assertEqual(recommendation["recommended_backend"], "rpi_ws281x")
+        self.assertIsNone(recommendation["alternative"])
+
+    @mock.patch("octoprint_ws281x_led_status.wizard.get_registry")
+    def test_pi4_fallback_to_adafruit(self, mock_get_registry):
+        """Pi 4 should fallback to Adafruit if rpi_ws281x unavailable"""
+        # Mock registry to return only Adafruit backend
+        mock_registry = mock.Mock()
+        mock_registry.list_backends.return_value = ["adafruit_neopixel_spi"]
+        mock_get_registry.return_value = mock_registry
+
+        wizard = PluginWizard(pi_model="4")
+        recommendation = wizard.get_backend_recommendation()
+
+        self.assertEqual(recommendation["pi_model"], "4")
+        self.assertEqual(recommendation["recommended_backend"], "adafruit_neopixel_spi")
+        self.assertIn("not available", recommendation["reason"])
+
+    @mock.patch("octoprint_ws281x_led_status.wizard.get_registry")
+    def test_no_backends_available(self, mock_get_registry):
+        """Should handle case where no backends are available"""
+        # Mock registry to return no backends
+        mock_registry = mock.Mock()
+        mock_registry.list_backends.return_value = []
+        mock_get_registry.return_value = mock_registry
+
+        wizard = PluginWizard(pi_model="4")
+        recommendation = wizard.get_backend_recommendation()
+
+        self.assertEqual(recommendation["pi_model"], "4")
+        self.assertIsNone(recommendation["recommended_backend"])
+        self.assertIn("No compatible", recommendation["reason"])

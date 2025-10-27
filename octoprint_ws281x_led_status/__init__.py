@@ -168,6 +168,7 @@ class WS281xLedStatusPlugin(
             "pi_model": PI_MODEL,
             "strip_types": constants.STRIP_TYPES,
             "backends": get_available_backends(),
+            "backend_recommendation": self.wizard.get_backend_recommendation(),
             "timezone": util.get_timezone(),
             "version": self._plugin_version,
             "is_docker": os.path.exists(os.path.join("/bin", "s6-svscanctl"))

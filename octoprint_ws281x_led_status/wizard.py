@@ -8,6 +8,7 @@ import logging
 import os
 
 from octoprint_ws281x_led_status import api
+from octoprint_ws281x_led_status.backend.factory import get_registry
 from octoprint_ws281x_led_status.util import run_system_command
 
 
@@ -31,6 +32,72 @@ class PluginWizard:
 
         return self.on_api_get()
 
+    def get_backend_recommendation(self):
+        """
+        Recommend the best LED backend based on detected Pi model.
+
+        Returns:
+            dict: Backend recommendation info with keys:
+                - pi_model: Detected Pi model (e.g., "5", "4", "3")
+                - recommended_backend: Backend name to use
+                - reason: Human-readable explanation
+                - alternative: Alternative backend (if any)
+        """
+        registry = get_registry()
+        available_backends = registry.list_backends()
+
+        # Determine recommended backend based on Pi model
+        if self.pi_model == "5":
+            # Pi 5 requires Adafruit backend
+            if "adafruit_neopixel_spi" in available_backends:
+                return {
+                    "pi_model": self.pi_model,
+                    "recommended_backend": "adafruit_neopixel_spi",
+                    "reason": "Raspberry Pi 5 is only supported by the Adafruit CircuitPython NeoPixel SPI backend. "
+                    "The rpi_ws281x backend does not work reliably on Pi 5.",
+                    "alternative": None,
+                }
+            else:
+                return {
+                    "pi_model": self.pi_model,
+                    "recommended_backend": None,
+                    "reason": "Raspberry Pi 5 requires the Adafruit CircuitPython NeoPixel SPI backend, "
+                    "but it is not installed. Please install the required dependencies.",
+                    "alternative": None,
+                }
+        else:
+            # Pi 1-4 work best with rpi_ws281x
+            if "rpi_ws281x" in available_backends:
+                alternative = (
+                    "adafruit_neopixel_spi"
+                    if "adafruit_neopixel_spi" in available_backends
+                    else None
+                )
+                return {
+                    "pi_model": self.pi_model,
+                    "recommended_backend": "rpi_ws281x",
+                    "reason": f"Raspberry Pi {self.pi_model} works best with the rpi_ws281x (PWM) backend. "
+                    "This is the most tested and reliable option for older Pi models.",
+                    "alternative": alternative,
+                }
+            else:
+                # Fallback to Adafruit if rpi_ws281x not available (shouldn't happen)
+                if "adafruit_neopixel_spi" in available_backends:
+                    return {
+                        "pi_model": self.pi_model,
+                        "recommended_backend": "adafruit_neopixel_spi",
+                        "reason": "The rpi_ws281x backend is not available. "
+                        "Using Adafruit CircuitPython NeoPixel SPI as alternative.",
+                        "alternative": None,
+                    }
+                else:
+                    return {
+                        "pi_model": self.pi_model,
+                        "recommended_backend": None,
+                        "reason": "No compatible LED backends are available. Please check your installation.",
+                        "alternative": None,
+                    }
+
     def on_api_get(self, **kwargs):
         # Wizard specific API
         return {
@@ -39,6 +106,7 @@ class PluginWizard:
             "spi_buffer_increase": self.validate(api.WIZ_INCREASE_BUFFER),
             "core_freq_set": self.validate(api.WIZ_SET_CORE_FREQ),
             "core_freq_min_set": self.validate(api.WIZ_SET_FREQ_MIN),
+            "backend_recommendation": self.get_backend_recommendation(),
         }
 
     def validate(self, cmd):

@@ -497,13 +497,13 @@ This feature will be implemented in multiple milestones to ensure stability and 
 
 **Commit:** `Pi5 Support - 4.1: Add user documentation for Pi5 support`
 
-#### Task 4.2: Update plugin README and changelog
+#### Task 4.2: Update plugin README and changelog ✅
 - Update main README with Pi 5 support information
 - Add to supported hardware list
 - Update changelog with all new features
 - Add migration notes for users
 
-**Commit:** `Pi5 Support - 4.2: Update README and changelog`
+**Commit:** `Pi5 Support - 4.2: Update README and changelog` ✅ cc2b1d6
 
 #### Task 4.3: Create setup wizard improvements
 - Update wizard to detect Pi model
