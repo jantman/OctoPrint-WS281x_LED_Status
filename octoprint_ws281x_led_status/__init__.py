@@ -230,6 +230,10 @@ class WS281xLedStatusPlugin(
     def on_api_get(self, request):
         return self.api.on_api_get(request=request)
 
+    def is_api_protected(self):
+        # Require authentication for all API commands
+        return True
+
     # Websocket communication
     def _send_ui_msg(self, msg_type, payload):
         self._plugin_manager.send_plugin_message(
