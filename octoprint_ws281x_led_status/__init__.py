@@ -175,7 +175,10 @@ class WS281xLedStatusPlugin(
 
     # Template plugin
     def get_template_configs(self):
-        return [{"type": "navbar", "styles": ["display: flex"]}]
+        return [
+            {"type": "navbar", "styles": ["display: flex"]},
+            {"type": "settings", "custom_bindings": False}
+        ]
 
     def get_template_vars(self):
         global PI_MODEL
