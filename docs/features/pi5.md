@@ -554,13 +554,49 @@ This feature will be implemented in multiple milestones to ensure stability and 
 
 **Commit:** `Pi5 Support - 4.8: Final verification and polish`
 
+#### Task 4.9: Bug fixes from Pi 5 user testing ✅
+During user testing on actual Raspberry Pi 5 hardware, several critical bugs were discovered and fixed:
+
+**4.9a - Settings Template Configuration (be01aa1, reverted 435fbb3)**
+- Initially suspected get_template_configs() was preventing settings template discovery
+- Determined auto-discovery is per-type, so this was not the issue
+- Reverted incorrect change
+
+**4.9b - SimpleApiPlugin API Protection (6686e11)**
+- Added is_api_protected() method to explicitly require authentication
+- Resolves deprecation warning from OctoPrint 1.11.2
+
+**4.9c - JavaScript Viewmodel Initialization (58acd68)**
+- Fixed "Cannot read properties of undefined (reading 'plugins')" error
+- Added null checks in backendDescription computed observable
+- Added null checks in calculate_power() function
+- Fixed calculate_power() to read count from backend.config.count (v4 schema)
+
+**4.9d - Modal Visibility Bindings (3017d35)**
+- Fixed backend-specific fields (Strip Type, GPIO Pin) not showing in modal
+- Knockout observables must be called with () in comparison expressions
+- Fixed all visibility bindings: `backend.type === 'foo'` → `backend.type() === 'foo'`
+
+**4.9e - Process Join Error (7ec0903)**
+- Fixed AssertionError during settings save: "can only join a started process"
+- Only call process.join() if process was actually started (_popen is not None)
+- Allows settings to be saved even when LED hardware is not available
+
+**4.9f - Debug Logging Removal (a0019af)**
+- Removed temporary debug logging added during troubleshooting
+- Settings save functionality now fully working
+
+**Commits:** 6686e11, 58acd68, 3017d35, 7ec0903, a0019af
+
 **Milestone 4 Completion Criteria:**
-- [ ] All documentation complete and accurate
-- [ ] Setup wizard enhanced
-- [ ] Logging and diagnostics comprehensive
-- [ ] Performance acceptable on all hardware
-- [ ] Installation smooth and well-documented
-- [ ] All tests passing
+- [x] All documentation complete and accurate
+- [x] Setup wizard enhanced
+- [x] Logging and diagnostics comprehensive
+- [ ] Performance acceptable on all hardware (deferred - optional)
+- [x] Installation smooth and well-documented
+- [x] All tests passing (117 tests)
+- [x] Settings UI working correctly
+- [x] Bug fixes from user testing complete
 - [ ] Feature ready for release
 
 ---
