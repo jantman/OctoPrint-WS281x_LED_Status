@@ -385,7 +385,9 @@ class WS281xLedStatusPlugin(
         if self.current_effect_process is not None:
             if self.current_effect_process.is_alive():
                 self.effect_queue.put(constants.KILL_MSG)
-            self.current_effect_process.join()
+            # Only join if the process was actually started
+            if self.current_effect_process._popen is not None:
+                self.current_effect_process.join()
 
         self._logger.info("WS281x LED Status runner stopped")
 
