@@ -327,6 +327,11 @@ def migrate_three_to_four(settings):
     # Filter out None values
     backend_config = filter_none(backend_config)
 
+    # If backend_config is empty (all values were None), use defaults
+    # This prevents creating an empty config: {} which breaks settings loading
+    if not backend_config:
+        backend_config = defaults["backend"]["config"].copy()
+
     # Set new backend section with rpi_ws281x as default
     settings.set(["backend"], {
         "type": "rpi_ws281x",

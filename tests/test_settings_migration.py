@@ -140,6 +140,34 @@ class TestSettingsMigrationV3toV4(unittest.TestCase):
         backend_config = backend["config"]
         self.assertEqual(backend_config["count"], 24)
 
+    def test_migrate_with_all_none_uses_defaults(self):
+        """Test migration uses defaults when all strip settings are None."""
+        from octoprint_ws281x_led_status.settings import defaults
+
+        # Simulate a fresh install or completely empty strip config
+        settings = MockSettings({
+            "strip": {
+                "adjustment": {"R": 100, "G": 100, "B": 100},
+            }
+        })
+
+        migrate_three_to_four(settings)
+
+        # Should create backend section with defaults, not empty config
+        backend = settings.get(["backend"])
+        self.assertIsNotNone(backend)
+        self.assertEqual(backend["type"], "rpi_ws281x")
+
+        # Backend config should have default values, not be empty
+        backend_config = backend["config"]
+        self.assertIsNotNone(backend_config)
+        self.assertGreater(len(backend_config), 0, "Backend config should not be empty")
+
+        # Should have all the default backend config values
+        self.assertEqual(backend_config["count"], defaults["backend"]["config"]["count"])
+        self.assertEqual(backend_config["brightness"], defaults["backend"]["config"]["brightness"])
+        self.assertEqual(backend_config["pin"], defaults["backend"]["config"]["pin"])
+
     def test_migrate_preserves_non_backend_settings(self):
         """Test that non-backend settings are not affected."""
         settings = MockSettings({
