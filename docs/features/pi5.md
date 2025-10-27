@@ -505,13 +505,13 @@ This feature will be implemented in multiple milestones to ensure stability and 
 
 **Commit:** `Pi5 Support - 4.2: Update README and changelog` ✅ cc2b1d6
 
-#### Task 4.3: Create setup wizard improvements
+#### Task 4.3: Create setup wizard improvements ✅
 - Update wizard to detect Pi model
 - Recommend appropriate backend based on hardware
 - Provide setup instructions specific to detected hardware
 - Test wizard flow on different Pi models
 
-**Commit:** `Pi5 Support - 4.3: Enhance setup wizard for backend selection`
+**Commit:** `Pi5 Support - 4.3: Enhance setup wizard for backend selection` ✅ d81a6e2
 
 #### Task 4.4: Add logging and diagnostics
 - Add detailed logging for backend selection and initialization
