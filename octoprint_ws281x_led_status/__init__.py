@@ -164,6 +164,7 @@ class WS281xLedStatusPlugin(
         self.restart_strip()
 
     def get_settings_defaults(self):
+        self._logger.info("get_settings_defaults called")
         return settings.defaults
 
     def get_settings_version(self):
