@@ -145,6 +145,9 @@ $(function () {
         };
 
         self.backendDescription = ko.computed(function () {
+            if (!self.settingsViewModel.settings || !self.settingsViewModel.settings.plugins) {
+                return "";
+            }
             var backend = self.settingsViewModel.settings.plugins.ws281x_led_status.backend.type();
             return self.backendDescriptions[backend] || "";
         });
@@ -157,9 +160,12 @@ $(function () {
         self.current_req = ko.observable("--A");
 
         self.calculate_power = function () {
+            if (!self.settingsViewModel.settings || !self.settingsViewModel.settings.plugins) {
+                return;
+            }
             var current_ma = parseInt(self.current_input(), 10);
             var num_pixels = parseInt(
-                self.settingsViewModel.settings.plugins.ws281x_led_status.strip.count(),
+                self.settingsViewModel.settings.plugins.ws281x_led_status.backend.config.count(),
                 10,
             );
 
