@@ -135,17 +135,7 @@ class WS281xLedStatusPlugin(
 
     # Settings plugin
     def on_settings_save(self, data):
-        self._logger.info("=== on_settings_save called ===")
-        self._logger.info(f"Data received: {data}")
-        self._logger.info(f"Data keys: {data.keys() if data else 'None'}")
-        if data and 'backend' in data:
-            self._logger.info(f"Backend data: {data['backend']}")
-
         octoprint.plugin.SettingsPlugin.on_settings_save(self, data)
-
-        self._logger.info("After parent on_settings_save")
-        self._logger.info(f"Saved backend type: {self._settings.get(['backend', 'type'])}")
-        self._logger.info(f"Saved backend config: {self._settings.get(['backend', 'config'])}")
 
         self.custom_triggers.process_settings(
             self._settings.get(["custom"], merged=True)
@@ -164,7 +154,6 @@ class WS281xLedStatusPlugin(
         self.restart_strip()
 
     def get_settings_defaults(self):
-        self._logger.info("get_settings_defaults called")
         return settings.defaults
 
     def get_settings_version(self):
