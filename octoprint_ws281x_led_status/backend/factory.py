@@ -229,7 +229,10 @@ def get_available_backends() -> Dict[str, Dict[str, Any]]:
     Returns:
         Dictionary of backend names to metadata dicts
     """
-    return _registry.list_backends()
+    backends = {}
+    for backend_name in _registry.list_backends():
+        backends[backend_name] = _registry.get_metadata(backend_name)
+    return backends
 
 
 def get_backend_diagnostics() -> Dict[str, Dict[str, Any]]:

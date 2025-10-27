@@ -9,6 +9,7 @@ from octoprint_ws281x_led_status.backend import LEDBackend
 from octoprint_ws281x_led_status.backend.factory import (
     BackendRegistry,
     create_backend,
+    get_available_backends,
     get_registry,
     register_backend,
 )
@@ -277,6 +278,29 @@ class TestFactoryFunctions(unittest.TestCase):
 
         metadata = registry.get_metadata("rpi_ws281x")
         self.assertIn("PWM", metadata["display_name"])
+
+    def test_get_available_backends(self):
+        """Test that get_available_backends returns properly structured dict."""
+        backends = get_available_backends()
+
+        # Should be a dictionary
+        self.assertIsInstance(backends, dict)
+
+        # Should contain rpi_ws281x backend
+        self.assertIn("rpi_ws281x", backends)
+
+        # Each backend should have metadata dict with display_name and description
+        for backend_name, metadata in backends.items():
+            self.assertIsInstance(metadata, dict)
+            self.assertIn("display_name", metadata)
+            self.assertIn("description", metadata)
+            self.assertIsInstance(metadata["display_name"], str)
+            self.assertIsInstance(metadata["description"], str)
+
+        # Verify rpi_ws281x metadata
+        rpi_metadata = backends["rpi_ws281x"]
+        self.assertIn("PWM", rpi_metadata["display_name"])
+        self.assertIn("rpi_ws281x", rpi_metadata["description"])
 
 
 if __name__ == "__main__":
