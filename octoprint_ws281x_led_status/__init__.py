@@ -14,7 +14,10 @@ from octoprint.events import Events, all_events
 from octoprint.util.version import is_octoprint_compatible
 
 from octoprint_ws281x_led_status import api, constants, settings, triggers, util, wizard
-from octoprint_ws281x_led_status.backend.factory import get_available_backends
+from octoprint_ws281x_led_status.backend.factory import (
+    get_available_backends,
+    get_backend_diagnostics,
+)
 from octoprint_ws281x_led_status.constants import AtCommands, DeprecatedAtCommands
 from octoprint_ws281x_led_status.runner import EffectRunner
 from octoprint_ws281x_led_status.util import RestartableTimer
@@ -111,6 +114,9 @@ class WS281xLedStatusPlugin(
 
     # Startup plugin
     def on_startup(self, host, port):
+        # Log backend diagnostics on startup
+        self._log_backend_diagnostics()
+
         self.custom_triggers.process_settings(
             self._settings.get(["custom"], merged=True)
         )
@@ -218,6 +224,50 @@ class WS281xLedStatusPlugin(
         self._plugin_manager.send_plugin_message(
             "ws281x_led_status", {"type": msg_type, "payload": payload}
         )
+
+    def _log_backend_diagnostics(self):
+        """Log available backends and their status on startup for diagnostic purposes"""
+        self._logger.info("=== LED Backend Diagnostics ===")
+
+        diagnostics = get_backend_diagnostics()
+
+        if not diagnostics:
+            self._logger.warning("No LED backends registered!")
+            return
+
+        for backend_name, info in diagnostics.items():
+            status = "✓ Available" if info["available"] else "✗ Unavailable"
+            self._logger.info(
+                f"  {backend_name} ({info['display_name']}): {status}"
+            )
+
+            if not info["available"]:
+                self._logger.info(f"    Reason: {info['availability_reason']}")
+
+            self._logger.debug(f"    Class: {info['class']}")
+            self._logger.debug(f"    Description: {info['description']}")
+
+        # Log currently configured backend
+        configured_backend = self._settings.get(["backend", "type"], merged=True)
+        self._logger.info(f"Configured backend: {configured_backend}")
+
+        # Warn if configured backend is not available
+        if configured_backend in diagnostics:
+            if not diagnostics[configured_backend]["available"]:
+                self._logger.warning(
+                    f"WARNING: Configured backend '{configured_backend}' is not available! "
+                    f"LED strip will fail to initialize."
+                )
+                self._logger.warning(
+                    f"  Reason: {diagnostics[configured_backend]['availability_reason']}"
+                )
+        else:
+            self._logger.error(
+                f"ERROR: Configured backend '{configured_backend}' is not registered!"
+            )
+
+        self._logger.info("=== End Backend Diagnostics ===")
+
 
     # Event Handler plugin
     def on_event(self, event, payload):

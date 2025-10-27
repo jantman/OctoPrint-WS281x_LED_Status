@@ -2,10 +2,14 @@ __author__ = "Jason Antman <jason@jasonantman.com>"
 __license__ = "GNU Affero General Public License http://www.gnu.org/licenses/agpl.html"
 __copyright__ = "Copyright (c) Jason Antman 2025 - released under the terms of the AGPLv3 License"
 
+import logging
 from typing import Any, Dict, Type
 
 from octoprint_ws281x_led_status.backend import LEDBackend
 from octoprint_ws281x_led_status.backend.rpi_ws281x_backend import RpiWS281xBackend
+
+# Module-level logger
+_logger = logging.getLogger("octoprint.plugins.ws281x_led_status.backend.factory")
 
 # Try to import Adafruit backend - may not be available
 try:
@@ -64,6 +68,10 @@ class BackendRegistry:
             "display_name": display_name or name,
             "description": description or "",
         }
+
+        _logger.debug(
+            f"Registered LED backend: '{name}' ({display_name or name}) - {backend_class.__name__}"
+        )
 
     def unregister(self, name: str) -> None:
         """
@@ -174,12 +182,19 @@ def create_backend(name: str, config: Dict[str, Any]) -> LEDBackend:
         KeyError: If the backend is not registered
         Exception: Any exception raised during backend initialization
     """
+    _logger.debug(f"Creating LED backend: '{name}'")
+    _logger.debug(f"Backend configuration: {config}")
+
     backend_class = _registry.get(name)
 
     try:
         backend = backend_class(config)
+        _logger.info(
+            f"Successfully created '{name}' backend with {config.get('count', 'unknown')} LEDs"
+        )
         return backend
     except Exception as e:
+        _logger.error(f"Failed to create backend '{name}': {e}")
         raise RuntimeError(
             f"Failed to create backend '{name}': {e}"
         ) from e
@@ -215,6 +230,48 @@ def get_available_backends() -> Dict[str, Dict[str, Any]]:
         Dictionary of backend names to metadata dicts
     """
     return _registry.list_backends()
+
+
+def get_backend_diagnostics() -> Dict[str, Dict[str, Any]]:
+    """
+    Get diagnostic information about all registered backends.
+
+    Returns detailed information about each backend including:
+    - Metadata (display_name, description)
+    - Availability status (if backend has is_available method)
+    - Backend class name
+
+    Returns:
+        Dictionary mapping backend names to diagnostic info
+    """
+    diagnostics = {}
+
+    for backend_name in _registry.list_backends():
+        backend_class = _registry.get(backend_name)
+        metadata = _registry.get_metadata(backend_name)
+
+        # Check if backend has is_available method
+        is_available = True
+        availability_reason = "Available"
+
+        if hasattr(backend_class, "is_available"):
+            try:
+                is_available = backend_class.is_available()
+                if not is_available:
+                    availability_reason = "Backend dependencies not available or SPI not accessible"
+            except Exception as e:
+                is_available = False
+                availability_reason = f"Error checking availability: {e}"
+
+        diagnostics[backend_name] = {
+            "display_name": metadata["display_name"],
+            "description": metadata["description"],
+            "class": backend_class.__name__,
+            "available": is_available,
+            "availability_reason": availability_reason,
+        }
+
+    return diagnostics
 
 
 # Register built-in backends

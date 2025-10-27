@@ -433,21 +433,34 @@ class EffectRunner:
         backend_name = self.backend_settings.get("type", "rpi_ws281x")
         backend_config = self.backend_settings.get("config", {})
 
+        self._logger.info(f"Starting LED strip with backend: '{backend_name}'")
+        self._logger.debug(
+            f"Backend config: count={backend_config.get('count')}, "
+            f"brightness={backend_config.get('brightness', 100)}%"
+        )
+
         try:
             # Create backend using factory
             strip = create_backend(backend_name, backend_config)
             strip.begin()
 
-            self._logger.info(f"Initialized LED backend: {backend_name}")
+            self._logger.info(
+                f"Successfully initialized '{backend_name}' backend "
+                f"with {strip.num_pixels()} LEDs at {strip.get_brightness()} brightness"
+            )
         except Exception as e:  # Probably wrong settings or backend unavailable
-            self._logger.error(repr(e))
-            self._logger.error("Strip failed to startup")
+            self._logger.error(f"Failed to initialize LED backend '{backend_name}': {repr(e)}")
+            self._logger.error(
+                f"Common causes: wrong GPIO pin, missing dependencies, "
+                f"SPI not enabled, or insufficient permissions"
+            )
             raise StripFailedError("Error initializing strip") from e
 
         # Create segments & segment manager
         try:
             self.segment_manager = segments.SegmentManager(strip, self.segment_settings)
             self.segment_manager.create_segments()
+            self._logger.debug(f"Created {len(self.segment_settings)} segment(s)")
         except segments.InvalidSegmentError:
             self._logger.error("Segment configuration error. Please report this issue!")
             raise

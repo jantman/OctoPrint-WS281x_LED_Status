@@ -43,28 +43,38 @@ class PluginWizard:
                 - reason: Human-readable explanation
                 - alternative: Alternative backend (if any)
         """
+        self._logger.debug(f"Generating backend recommendation for Raspberry Pi {self.pi_model}")
+
         registry = get_registry()
         available_backends = registry.list_backends()
+
+        self._logger.debug(f"Available backends: {', '.join(available_backends) if available_backends else 'none'}")
 
         # Determine recommended backend based on Pi model
         if self.pi_model == "5":
             # Pi 5 requires Adafruit backend
             if "adafruit_neopixel_spi" in available_backends:
-                return {
+                recommendation = {
                     "pi_model": self.pi_model,
                     "recommended_backend": "adafruit_neopixel_spi",
                     "reason": "Raspberry Pi 5 is only supported by the Adafruit CircuitPython NeoPixel SPI backend. "
                     "The rpi_ws281x backend does not work reliably on Pi 5.",
                     "alternative": None,
                 }
+                self._logger.info(f"Pi 5 detected: Recommending '{recommendation['recommended_backend']}' backend")
+                return recommendation
             else:
-                return {
+                recommendation = {
                     "pi_model": self.pi_model,
                     "recommended_backend": None,
                     "reason": "Raspberry Pi 5 requires the Adafruit CircuitPython NeoPixel SPI backend, "
                     "but it is not installed. Please install the required dependencies.",
                     "alternative": None,
                 }
+                self._logger.warning(
+                    "Pi 5 detected but Adafruit backend not available! LED strip will not work."
+                )
+                return recommendation
         else:
             # Pi 1-4 work best with rpi_ws281x
             if "rpi_ws281x" in available_backends:
@@ -73,30 +83,43 @@ class PluginWizard:
                     if "adafruit_neopixel_spi" in available_backends
                     else None
                 )
-                return {
+                recommendation = {
                     "pi_model": self.pi_model,
                     "recommended_backend": "rpi_ws281x",
                     "reason": f"Raspberry Pi {self.pi_model} works best with the rpi_ws281x (PWM) backend. "
                     "This is the most tested and reliable option for older Pi models.",
                     "alternative": alternative,
                 }
+                self._logger.info(
+                    f"Pi {self.pi_model} detected: Recommending '{recommendation['recommended_backend']}' backend"
+                )
+                return recommendation
             else:
                 # Fallback to Adafruit if rpi_ws281x not available (shouldn't happen)
                 if "adafruit_neopixel_spi" in available_backends:
-                    return {
+                    recommendation = {
                         "pi_model": self.pi_model,
                         "recommended_backend": "adafruit_neopixel_spi",
                         "reason": "The rpi_ws281x backend is not available. "
                         "Using Adafruit CircuitPython NeoPixel SPI as alternative.",
                         "alternative": None,
                     }
+                    self._logger.warning(
+                        f"Pi {self.pi_model}: rpi_ws281x backend not available, "
+                        f"falling back to Adafruit backend"
+                    )
+                    return recommendation
                 else:
-                    return {
+                    recommendation = {
                         "pi_model": self.pi_model,
                         "recommended_backend": None,
                         "reason": "No compatible LED backends are available. Please check your installation.",
                         "alternative": None,
                     }
+                    self._logger.error(
+                        f"Pi {self.pi_model}: No compatible LED backends available!"
+                    )
+                    return recommendation
 
     def on_api_get(self, **kwargs):
         # Wizard specific API
