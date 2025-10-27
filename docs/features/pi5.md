@@ -538,13 +538,13 @@ This feature will be implemented in multiple milestones to ensure stability and 
 
 **Commit:** `Pi5 Support - 4.6: Complete hardware compatibility testing`
 
-#### Task 4.7: Update dependencies in setup.py
-- Make Adafruit backend dependencies optional
-- Update installation instructions
-- Test installation process
-- Verify plugin installs correctly on different systems
+#### Task 4.7: Update dependencies in setup.py ✅
+- Add Adafruit backend as required dependency (not optional - OctoPrint doesn't support optional deps)
+- Update installation instructions in documentation
+- Update CHANGELOG with dependency information
+- Clarify automatic installation via Plugin Manager
 
-**Commit:** `Pi5 Support - 4.7: Update installation dependencies`
+**Commit:** `Pi5 Support - 4.7: Add Adafruit backend dependencies to setup.py` ✅ 9db65b9
 
 #### Task 4.8: Final verification
 - Run all tests one final time
