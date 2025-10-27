@@ -15,7 +15,17 @@ This plugin uses the **SPI-based approach** for maximum stability and compatibil
 
 ## Python Package Requirements
 
-### Required Packages
+### Automatic Installation (Recommended)
+
+**When installing or updating this plugin via OctoPrint's Plugin Manager, all required dependencies are installed automatically.** This includes both:
+- `rpi_ws281x>=4.3.3` (for Pi 1-4 PWM backend)
+- `adafruit-circuitpython-neopixel-spi>=1.0.0` (for Pi 5 SPI backend)
+
+**No manual pip installation is required!**
+
+### Manual Installation (Advanced/Development Only)
+
+If you're installing the plugin manually or developing locally, install the Adafruit backend dependencies:
 
 ```bash
 pip3 install adafruit-circuitpython-neopixel-spi
@@ -25,13 +35,6 @@ This package automatically installs its dependencies:
 - `adafruit-circuitpython-busdevice`
 - `adafruit-circuitpython-pixelbuf`
 - `Adafruit-Blinka` (provides CircuitPython compatibility on Linux)
-
-### Optional Packages
-
-For LED animation support (if needed):
-```bash
-pip3 install adafruit-circuitpython-led-animation
-```
 
 ## System Requirements
 
@@ -196,6 +199,8 @@ The plugin should apply brightness adjustments at the color level before sending
 
 ### Quick Start for Pi 5 Users
 
+**Note:** When you install or update this plugin via OctoPrint's Plugin Manager, the Adafruit backend dependencies are installed automatically. You only need to configure the system.
+
 1. Enable SPI:
    ```bash
    sudo raspi-config
@@ -207,24 +212,21 @@ The plugin should apply brightness adjustments at the color level before sending
    sudo usermod -a -G spi pi
    ```
 
-3. Install Adafruit libraries:
-   ```bash
-   ~/oprint/bin/pip install adafruit-circuitpython-neopixel-spi
-   ```
-
-4. Connect LED strip to:
+3. Connect LED strip to:
    - Data: GPIO 10 (Physical pin 19)
    - Power: 5V (Physical pin 2 or 4)
    - Ground: GND (Physical pin 6, 9, 14, 20, 25, 30, 34, or 39)
 
-5. Select "Adafruit NeoPixel (SPI)" backend in plugin settings
+4. Select "Adafruit NeoPixel (SPI)" backend in plugin settings
 
-6. Restart OctoPrint
+5. Restart OctoPrint
 
 ### Troubleshooting
 
 **"No module named 'neopixel_spi'"**
-- Install the package: `~/oprint/bin/pip install adafruit-circuitpython-neopixel-spi`
+- If you installed the plugin via OctoPrint's Plugin Manager, the dependencies should be installed automatically
+- Try reinstalling or updating the plugin via Plugin Manager
+- For manual installations: `~/oprint/bin/pip install adafruit-circuitpython-neopixel-spi`
 
 **"Permission denied: /dev/spidev0.0"**
 - Add user to spi group: `sudo usermod -a -G spi $USER`

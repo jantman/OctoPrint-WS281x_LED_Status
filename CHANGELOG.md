@@ -24,6 +24,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Plugin now supports multiple LED control backends:
   - `rpi_ws281x`: Original backend for Raspberry Pi 3/4 (default)
   - `adafruit`: Adafruit CircuitPython NeoPixel SPI backend for Raspberry Pi 5
+- **Dependencies updated**: Both `rpi_ws281x` and `adafruit-circuitpython-neopixel-spi` are now installed automatically by OctoPrint's Plugin Manager
+  - No manual pip installation required
+  - All dependencies installed for all users, backend selection determines which is used
 
 ### Migration Notes
 
@@ -35,7 +38,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 **For Raspberry Pi 5 users:**
 - After upgrading, go to plugin settings and select the "Adafruit CircuitPython NeoPixel SPI" backend
-- Follow the Pi 5 setup guide in the documentation to install dependencies and enable SPI
+- Dependencies are installed automatically by OctoPrint's Plugin Manager
+- You only need to enable SPI in raspi-config and add your user to the `spi` group
 - Note that the Adafruit backend uses GPIO 10 (physical pin 19) for data output via SPI
 - See `docs/features/adafruit_backend_requirements.md` for detailed setup instructions
 
