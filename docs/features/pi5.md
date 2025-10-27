@@ -513,13 +513,13 @@ This feature will be implemented in multiple milestones to ensure stability and 
 
 **Commit:** `Pi5 Support - 4.3: Enhance setup wizard for backend selection` ✅ d81a6e2
 
-#### Task 4.4: Add logging and diagnostics
+#### Task 4.4: Add logging and diagnostics ✅
 - Add detailed logging for backend selection and initialization
 - Log backend capabilities on startup
 - Add diagnostic information to debug logging
 - Help troubleshoot issues with backend selection
 
-**Commit:** `Pi5 Support - 4.4: Enhance logging and diagnostics`
+**Commit:** `Pi5 Support - 4.4: Enhance logging and diagnostics` ✅ 90fb273
 
 #### Task 4.5: Performance testing and optimization
 - Test effect performance with both backends
