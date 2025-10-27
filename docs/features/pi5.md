@@ -565,6 +565,121 @@ This feature will be implemented in multiple milestones to ensure stability and 
 
 ---
 
+## Milestone 5: Backend-Aware Wizard (Future Enhancement)
+
+**Goal:** Make the setup wizard backend-aware so it only shows relevant OS configuration tests based on the detected Pi model and selected/recommended backend.
+
+**Problem Statement:**
+Currently, the setup wizard shows all OS configuration tests regardless of:
+- Which Pi model is detected
+- Which backend is appropriate for that hardware
+- Whether those tests are actually relevant to the selected backend
+
+This results in false failures on Pi 5 when using the Adafruit backend, as the wizard checks for `rpi_ws281x`-specific requirements that don't apply to the SPI-based Adafruit backend.
+
+**Impact:**
+- **Pi 5 users** see 3 failed tests (SPI buffer size, core_freq settings) that are irrelevant to the Adafruit backend
+- **Confusing UX** - users don't know whether to worry about these "failures"
+- **False negatives** - SPI enabled test may fail even when SPI is working (checks wrong path on Pi 5)
+- **Wasted effort** - users might try to fix things that don't need fixing
+
+### Architecture
+
+#### Backend-Specific Test Requirements
+
+**rpi_ws281x Backend (Pi 1-4):**
+- ✅ User in `gpio` group (required)
+- ✅ SPI enabled in `/boot/config.txt` (required for Pi 3/4)
+- ✅ SPI buffer size increased (recommended for >200 LEDs)
+- ✅ core_freq settings (Pi 3: `core_freq=250`, Pi 4: `core_freq_min=500`)
+
+**Adafruit NeoPixel SPI Backend (Pi 5):**
+- ✅ User in `spi` group (required)
+- ✅ SPI enabled - check `/boot/firmware/config.txt` OR `/dev/spidev0.0` exists (required)
+- ❌ SPI buffer size (not applicable)
+- ❌ core_freq settings (not applicable - SPI has hardware timing)
+
+### Tasks
+
+#### Task 5.1: Create backend-specific test definitions
+- Define which tests apply to which backends
+- Create test requirement specifications per backend
+- Add Pi 5 specific checks (firmware config path, spi group)
+
+**Commit:** `Wizard Enhancement - 5.1: Define backend-specific test requirements`
+
+#### Task 5.2: Refactor wizard validation logic
+- Make validators backend-aware
+- Add Pi 5 detection and special handling
+- Check `/boot/firmware/config.txt` on Pi 5 as fallback
+- Update group membership checks based on backend
+
+**Commit:** `Wizard Enhancement - 5.2: Implement backend-aware validation`
+
+#### Task 5.3: Update wizard UI to show only relevant tests
+- Filter tests based on detected Pi model and recommended backend
+- Add explanatory text about which backend is being configured
+- Show informational message about skipped tests
+- Update test descriptions to be backend-specific
+
+**Commit:** `Wizard Enhancement - 5.3: Update wizard UI for backend-aware tests`
+
+#### Task 5.4: Add backend switching handling
+- Handle case where user changes backend selection
+- Re-validate with new backend's requirements
+- Show/hide tests dynamically based on backend selection
+
+**Commit:** `Wizard Enhancement - 5.4: Support backend switching in wizard`
+
+#### Task 5.5: Update wizard tests
+- Add tests for backend-aware validation logic
+- Test Pi 5 specific checks
+- Test filtering logic for different Pi models
+- Test backend switching scenarios
+
+**Commit:** `Wizard Enhancement - 5.5: Add tests for backend-aware wizard`
+
+#### Task 5.6: Update documentation
+- Document backend-specific requirements clearly
+- Update wizard screenshots/guides
+- Add troubleshooting for Pi 5 specific issues
+- Document the wizard's backend-aware behavior
+
+**Commit:** `Wizard Enhancement - 5.6: Update documentation for backend-aware wizard`
+
+### Implementation Notes
+
+**Pi 5 Specific Considerations:**
+- Config file location: `/boot/firmware/config.txt` (not `/boot/config.txt`)
+- Group membership: `spi` group (not `gpio` group)
+- SPI verification: Check `/dev/spidev0.0` exists as fallback if config file check fails
+- Skip buffer size and core_freq tests entirely
+
+**Backward Compatibility:**
+- Pi 1-4 users should see no change in wizard behavior
+- Default to rpi_ws281x tests if backend cannot be determined
+- All existing tests should continue to work for rpi_ws281x backend
+
+**User Experience:**
+- Clear indication of which backend is being configured
+- Explanation of why certain tests are skipped
+- Backend recommendation visible in wizard
+- Option to manually override backend selection
+
+**Milestone 5 Completion Criteria:**
+- [ ] Wizard only shows relevant tests for detected hardware/backend
+- [ ] Pi 5 users see correct tests (spi group, SPI enabled via device check)
+- [ ] Pi 1-4 users see no change in wizard behavior
+- [ ] Clear UI indicators of which backend is being configured
+- [ ] All wizard tests passing for both backends
+- [ ] Documentation updated with backend-specific requirements
+- [ ] No false failures on any supported hardware
+
+**Priority:** Medium (Enhancement)
+**Estimated Effort:** 2-3 days
+
+---
+
 ### Testing Strategy
 
 **Unit Tests:**
