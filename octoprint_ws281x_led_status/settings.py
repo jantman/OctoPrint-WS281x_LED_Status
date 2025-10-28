@@ -24,6 +24,7 @@ defaults = {
             "brightness": 50,
             "channel": 0,
             "type": "WS2811_STRIP_GRB",
+            "pixel_order": "GRB",  # For Adafruit backends
         },
     },
     "effects": {
