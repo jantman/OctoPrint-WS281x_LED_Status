@@ -11,18 +11,16 @@ from octoprint_ws281x_led_status.backend.rpi_ws281x_backend import RpiWS281xBack
 # Module-level logger
 _logger = logging.getLogger("octoprint.plugins.ws281x_led_status.backend.factory")
 
-# Try to import Adafruit backend - may not be available
+# Try to import Adafruit PWM backend - may not be available
 try:
-    from octoprint_ws281x_led_status.backend.adafruit_neopixel_spi_backend import (
-        AdafruitNeoPixelSPIBackend,
-        is_available as adafruit_is_available,
+    from octoprint_ws281x_led_status.backend.adafruit_neopixel_pwm_backend import (
+        AdafruitNeoPixelPWMBackend,
     )
 
     ADAFRUIT_BACKEND_AVAILABLE = True
 except ImportError:
     ADAFRUIT_BACKEND_AVAILABLE = False
-    AdafruitNeoPixelSPIBackend = None
-    adafruit_is_available = lambda: False
+    AdafruitNeoPixelPWMBackend = None
 
 
 class BackendRegistry:
@@ -261,7 +259,7 @@ def get_backend_diagnostics() -> Dict[str, Dict[str, Any]]:
             try:
                 is_available = backend_class.is_available()
                 if not is_available:
-                    availability_reason = "Backend dependencies not available or SPI not accessible"
+                    availability_reason = "Backend dependencies not available"
             except Exception as e:
                 is_available = False
                 availability_reason = f"Error checking availability: {e}"
@@ -287,14 +285,14 @@ register_backend(
     "Requires user to be in the gpio group.",
 )
 
-# Register Adafruit backend if available
+# Register Adafruit PWM backend if available
 if ADAFRUIT_BACKEND_AVAILABLE:
     register_backend(
-        "adafruit_neopixel_spi",
-        AdafruitNeoPixelSPIBackend,
-        display_name="Adafruit NeoPixel (SPI)",
-        description="Adafruit CircuitPython NeoPixel SPI library. "
+        "adafruit_neopixel_pwm",
+        AdafruitNeoPixelPWMBackend,
+        display_name="Adafruit CircuitPython NeoPixel (PWM)",
+        description="Adafruit CircuitPython NeoPixel library using PWM interface. "
         "Works on all Raspberry Pi models including Pi 5. "
-        "Uses SPI interface (GPIO 10). Requires SPI to be enabled and "
-        "user to be in the spi group. No firmware updates required.",
+        "Supports any GPIO pin. No special group membership or configuration "
+        "required beyond standard GPIO access.",
     )
