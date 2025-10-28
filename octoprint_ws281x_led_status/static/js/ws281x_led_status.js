@@ -141,7 +141,7 @@ $(function () {
         /* Backend selection */
         self.backendDescriptions = {
             "rpi_ws281x": "Standard rpi_ws281x library using PWM/PCM interface. Works on Raspberry Pi 1-4, Zero, Zero 2 (NOT Pi 5). Requires user to be in the gpio group.",
-            "adafruit_neopixel_spi": "Adafruit CircuitPython NeoPixel SPI library. Works on all Raspberry Pi models including Pi 5. Uses SPI interface (GPIO 10). Requires SPI to be enabled and user to be in the spi group. No firmware updates required."
+            "adafruit_neopixel_pwm": "Adafruit CircuitPython NeoPixel library using PWM interface. Works on all Raspberry Pi models including Pi 5. Supports any GPIO pin. No special group membership or configuration required."
         };
 
         self.backendDescription = ko.computed(function () {
