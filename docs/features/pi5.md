@@ -752,3 +752,254 @@ This results in false failures on Pi 5 when using the Adafruit backend, as the w
 
 **Rollback Plan:**
 If critical issues are discovered, the abstraction layer is designed to preserve the original rpi_ws281x behavior as default, allowing users to continue using the plugin even if new backends have issues.
+
+---
+
+### Milestone 6: Replace SPI Backend with PWM Backend
+
+**Goal:** Replace the non-functional SPI backend with a working PWM-based Adafruit backend for Raspberry Pi 5 support.
+
+**Context:**
+User testing on actual Raspberry Pi 5 hardware revealed that:
+1. The SPI backend (`adafruit-circuitpython-neopixel-spi`) runs without errors but does not actually control the LEDs
+2. The PWM backend (`adafruit-circuitpython-neopixel`) works perfectly on Pi 5
+3. The PWM backend allows configurable GPIO pin (not fixed to GPIO 10)
+4. User's test script successfully controls LEDs using PWM approach on GPIO 10
+
+This milestone will replace the SPI implementation with a PWM implementation using the proven working library.
+
+**Tasks:**
+
+#### Task 6.1: Implement Adafruit PWM Backend
+
+Create new backend implementation using `adafruit-circuitpython-neopixel` (PWM-based library).
+
+**Implementation Details:**
+- Create `octoprint_ws281x_led_status/backend/adafruit_neopixel_pwm_backend.py`
+- Implement `AdafruitNeoPixelPWMBackend` class extending `LEDBackend` interface
+- Configuration parameters:
+  - `pin` (int): GPIO pin number (e.g., 10, 18, 21) - required, no default
+  - `count` (int): Number of LEDs - required
+  - `brightness` (int): 0-100 percentage - required
+  - `pixel_order` (str): "RGB", "GRB", "RGBW", "GRBW", etc. - required
+  - `auto_write` (bool): Whether to auto-update on pixel changes - default False
+- Use `board.D{pin}` to get the pin object (e.g., `board.D10` for GPIO 10)
+- Map percentage brightness (0-100) to float (0.0-1.0) for neopixel library
+- Map pixel_order string to neopixel constants (RGB, GRB, RGBW, GRBW, etc.)
+- Implement all LEDBackend interface methods
+- Handle RGBW vs RGB strips correctly (4-value vs 3-value tuples)
+
+**Error Handling:**
+- Validate GPIO pin is valid for the board
+- Validate pixel_order is supported
+- Provide clear error messages for missing dependencies
+- Handle initialization failures gracefully
+
+**Commit:** `Pi5 Support - 6.1: Implement Adafruit PWM backend for Pi 5`
+
+#### Task 6.2: Update Backend Factory and Registry
+
+Update factory to register PWM backend and deprecate/remove SPI backend.
+
+**Implementation Details:**
+- Register `AdafruitNeoPixelPWMBackend` as `"adafruit_neopixel_pwm"` in factory
+- Update display name: "Adafruit CircuitPython NeoPixel (PWM)"
+- Update description: "Adafruit CircuitPython NeoPixel library using PWM interface. Works on all Raspberry Pi models including Pi 5. Supports any GPIO pin. No special group membership or configuration required beyond standard GPIO access."
+- Remove `AdafruitNeoPixelSPIBackend` registration (or mark as deprecated)
+- Update `get_available_backends()` to exclude SPI backend
+- Update backend metadata with accurate capability information
+
+**Commit:** `Pi5 Support - 6.2: Register PWM backend and remove SPI backend`
+
+#### Task 6.3: Update Default Settings
+
+Update settings defaults for PWM backend.
+
+**Implementation Details:**
+- Update `settings.py` defaults:
+  - Add `pin` to default backend config (default: 10 for GPIO 10)
+  - Keep `pixel_order` in config (default: "GRB" for most NeoPixels)
+  - Remove SPI-specific config options if any
+- No migration needed since no external users yet
+- Update settings schema documentation
+
+**Commit:** `Pi5 Support - 6.3: Update default settings for PWM backend`
+
+#### Task 6.4: Update UI Templates for GPIO Pin Configuration
+
+Update settings modal to show GPIO pin field for Adafruit PWM backend.
+
+**Implementation Details:**
+- Update `templates/settings/strip_modal.jinja2`:
+  - Remove `adafruit_neopixel_spi` visibility conditions
+  - Add `adafruit_neopixel_pwm` visibility conditions
+  - Replace fixed "GPIO 10 (Physical Pin 19) - Fixed for SPI" text with:
+    - Input field for GPIO pin number when PWM backend selected
+    - Help text: "Common pins: GPIO 10 (Pin 19), GPIO 18 (Pin 12), GPIO 21 (Pin 40)"
+    - Validation: Must be valid GPIO pin for Raspberry Pi
+  - Keep pixel_order dropdown for PWM backend (same as SPI had)
+  - Update Advanced Settings to show/hide based on backend type
+- Update backend description text in modal:
+  - PWM backend: "PWM-based NeoPixel control. Works on Pi 5 and all older models. Supports any GPIO pin."
+  - Remove SPI backend description
+
+**UI Behavior:**
+- When "Adafruit CircuitPython NeoPixel (PWM)" selected:
+  - Show: GPIO Pin input field
+  - Show: Pixel Order dropdown
+  - Show: LED count, brightness
+  - Hide: rpi_ws281x specific settings (strip type, frequency, DMA, etc.)
+
+**Commit:** `Pi5 Support - 6.4: Update UI for PWM backend GPIO pin configuration`
+
+#### Task 6.5: Update Setup Wizard Recommendations
+
+Update wizard to recommend PWM backend for Pi 5.
+
+**Implementation Details:**
+- Update `wizard.py` `get_backend_recommendation()`:
+  - Pi 5: Recommend `"adafruit_neopixel_pwm"` instead of `"adafruit_neopixel_spi"`
+  - Update reason text to explain PWM backend advantages
+  - Suggest GPIO 10 or GPIO 18 as common choices
+  - Remove SPI-specific recommendations
+- Update `templates/ws281x_led_status_wizard.jinja2`:
+  - Update backend recommendation text for Pi 5
+  - Remove SPI-specific setup instructions
+  - Add note about GPIO pin selection flexibility
+  - Update link to point to PWM setup guide
+
+**Commit:** `Pi5 Support - 6.5: Update wizard to recommend PWM backend for Pi 5`
+
+#### Task 6.6: Write Comprehensive Unit Tests
+
+Add complete test coverage for PWM backend.
+
+**Implementation Details:**
+- Create `tests/test_adafruit_pwm_backend.py`:
+  - Test backend initialization with various configs
+  - Test GPIO pin validation
+  - Test pixel_order mapping (RGB, GRB, RGBW, GRBW, etc.)
+  - Test brightness conversion (percentage to float)
+  - Test all LEDBackend interface methods with mocks
+  - Test RGBW vs RGB handling
+  - Test error conditions (invalid pin, invalid pixel_order)
+  - Test `is_available()` method
+- Update `tests/test_backend_factory.py`:
+  - Remove SPI backend tests
+  - Add PWM backend registration tests
+  - Update `get_available_backends()` tests
+- Update `tests/test_wizard.py`:
+  - Update Pi 5 recommendation tests to expect PWM backend
+  - Test new GPIO pin guidance
+
+**Target:** Maintain or increase test coverage (currently 117 tests)
+
+**Commit:** `Pi5 Support - 6.6: Add comprehensive tests for PWM backend`
+
+#### Task 6.7: Update Dependencies
+
+Update Python package dependencies.
+
+**Implementation Details:**
+- Update `setup.py` `plugin_requires`:
+  - Remove: `"adafruit-circuitpython-neopixel-spi>=1.0.0"`
+  - Add: `"adafruit-circuitpython-neopixel>=6.0.0"`
+  - Keep: `"rpi_ws281x>=4.3.3"` (for backward compatibility with Pi 1-4)
+- Update installation documentation
+- Note: Both Adafruit libraries use same base dependencies (Blinka, etc.)
+
+**Commit:** `Pi5 Support - 6.7: Update dependencies for PWM backend`
+
+#### Task 6.8: Update Documentation
+
+Update all user-facing documentation.
+
+**Implementation Details:**
+- Update `docs/configuration/led-strip-configuration.md`:
+  - Replace SPI backend documentation with PWM backend
+  - Document GPIO pin selection
+  - Explain pixel_order options
+  - Add troubleshooting for PWM backend
+  - Update examples to use GPIO 10 or GPIO 18
+- Update `README.md`:
+  - Update Pi 5 support description
+  - Mention flexible GPIO pin selection
+  - Update feature list
+- Update `CHANGELOG.md`:
+  - Add entry for PWM backend replacement
+  - Document change from SPI to PWM
+- Update wizard help text and Pi 5 setup guide
+
+**Commit:** `Pi5 Support - 6.8: Update documentation for PWM backend`
+
+#### Task 6.9: Remove SPI Backend Code
+
+Clean up SPI backend implementation.
+
+**Implementation Details:**
+- Delete `octoprint_ws281x_led_status/backend/adafruit_neopixel_spi_backend.py`
+- Delete or update `tests/test_adafruit_backend.py` (currently tests SPI backend)
+- Remove SPI-specific imports and references
+- Clean up any SPI-specific constants
+- Update code comments removing SPI references
+
+**Safety:**
+- Document in code comments why SPI was removed
+- Preserve git history for future reference
+
+**Commit:** `Pi5 Support - 6.9: Remove non-functional SPI backend code`
+
+#### Task 6.10: Final Testing and Verification
+
+Comprehensive testing on Pi 5 hardware.
+
+**Implementation Details:**
+- Run all unit tests (should maintain 117+ tests passing)
+- Manual testing on Pi 5:
+  - Fresh install with wizard
+  - GPIO pin configuration (test GPIO 10, 18, 21)
+  - All effects (startup, idle, printing, torch, progress, etc.)
+  - Color accuracy with different pixel orders
+  - RGBW strips
+  - Settings persistence
+  - Browser compatibility
+- Test backward compatibility on Pi 3/4 (if available):
+  - Existing rpi_ws281x installations unaffected
+  - Wizard still recommends rpi_ws281x for older Pis
+  - No regressions
+
+**Success Criteria:**
+- All tests passing
+- LEDs working on Pi 5 with PWM backend
+- GPIO pin configuration working
+- Settings UI functional
+- No regressions on older Pis (if tested)
+
+**Commit:** `Pi5 Support - 6.10: Final verification of PWM backend implementation`
+
+---
+
+**Milestone 6 Completion Criteria:**
+- [ ] PWM backend implemented and tested
+- [ ] SPI backend removed from codebase
+- [ ] GPIO pin configurable in UI
+- [ ] Wizard recommends PWM backend for Pi 5
+- [ ] All unit tests passing (117+)
+- [ ] LEDs working on actual Pi 5 hardware
+- [ ] Documentation updated
+- [ ] Dependencies updated
+
+**Priority:** High (Bug Fix - SPI backend non-functional)
+**Estimated Effort:** 3-4 days
+
+**Breaking Changes:**
+- SPI backend removed from available options
+- GPIO pin becomes configurable (previously fixed to GPIO 10)
+- Users must reconfigure from SPI to PWM backend manually
+
+**Benefits:**
+- Actually working LED control on Pi 5
+- Flexible GPIO pin selection (not fixed to GPIO 10)
+- Simpler configuration (no SPI device requirements)
+- Proven to work on user's hardware
+- Better user experience
