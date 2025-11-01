@@ -39,7 +39,7 @@ plugin_license = "AGPLv3"
 # Any additional requirements besides OctoPrint should be listed here
 plugin_requires = [
     "rpi_ws281x>=4.3.3",  # PWM backend for Pi 1-4
-    "adafruit-circuitpython-neopixel-spi>=1.0.0",  # SPI backend for Pi 5
+    "adafruit-circuitpython-neopixel>=1.0.0",  # PWM backend for Pi 5
 ]
 
 ### --------------------------------------------------------------------------------------------------------------------

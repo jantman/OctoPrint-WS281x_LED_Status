@@ -218,12 +218,12 @@ class TestWizardBackendRecommendation(unittest.TestCase):
 
     @mock.patch("octoprint_ws281x_led_status.wizard.get_registry")
     def test_pi5_recommends_adafruit_when_available(self, mock_get_registry):
-        """Pi 5 should recommend Adafruit backend when available"""
+        """Pi 5 should recommend Adafruit PWM backend when available"""
         # Mock registry to return both backends
         mock_registry = mock.Mock()
         mock_registry.list_backends.return_value = [
             "rpi_ws281x",
-            "adafruit_neopixel_spi",
+            "adafruit_neopixel_pwm",
         ]
         mock_get_registry.return_value = mock_registry
 
@@ -231,7 +231,7 @@ class TestWizardBackendRecommendation(unittest.TestCase):
         recommendation = wizard.get_backend_recommendation()
 
         self.assertEqual(recommendation["pi_model"], "5")
-        self.assertEqual(recommendation["recommended_backend"], "adafruit_neopixel_spi")
+        self.assertEqual(recommendation["recommended_backend"], "adafruit_neopixel_pwm")
         self.assertIsNone(recommendation["alternative"])
         self.assertIn("Raspberry Pi 5", recommendation["reason"])
 
@@ -257,7 +257,7 @@ class TestWizardBackendRecommendation(unittest.TestCase):
         mock_registry = mock.Mock()
         mock_registry.list_backends.return_value = [
             "rpi_ws281x",
-            "adafruit_neopixel_spi",
+            "adafruit_neopixel_pwm",
         ]
         mock_get_registry.return_value = mock_registry
 
@@ -266,7 +266,7 @@ class TestWizardBackendRecommendation(unittest.TestCase):
 
         self.assertEqual(recommendation["pi_model"], "4")
         self.assertEqual(recommendation["recommended_backend"], "rpi_ws281x")
-        self.assertEqual(recommendation["alternative"], "adafruit_neopixel_spi")
+        self.assertEqual(recommendation["alternative"], "adafruit_neopixel_pwm")
         self.assertIn("works best with", recommendation["reason"])
 
     @mock.patch("octoprint_ws281x_led_status.wizard.get_registry")
@@ -286,17 +286,17 @@ class TestWizardBackendRecommendation(unittest.TestCase):
 
     @mock.patch("octoprint_ws281x_led_status.wizard.get_registry")
     def test_pi4_fallback_to_adafruit(self, mock_get_registry):
-        """Pi 4 should fallback to Adafruit if rpi_ws281x unavailable"""
-        # Mock registry to return only Adafruit backend
+        """Pi 4 should fallback to Adafruit PWM if rpi_ws281x unavailable"""
+        # Mock registry to return only Adafruit PWM backend
         mock_registry = mock.Mock()
-        mock_registry.list_backends.return_value = ["adafruit_neopixel_spi"]
+        mock_registry.list_backends.return_value = ["adafruit_neopixel_pwm"]
         mock_get_registry.return_value = mock_registry
 
         wizard = PluginWizard(pi_model="4")
         recommendation = wizard.get_backend_recommendation()
 
         self.assertEqual(recommendation["pi_model"], "4")
-        self.assertEqual(recommendation["recommended_backend"], "adafruit_neopixel_spi")
+        self.assertEqual(recommendation["recommended_backend"], "adafruit_neopixel_pwm")
         self.assertIn("not available", recommendation["reason"])
 
     @mock.patch("octoprint_ws281x_led_status.wizard.get_registry")

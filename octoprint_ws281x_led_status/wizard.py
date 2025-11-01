@@ -52,12 +52,13 @@ class PluginWizard:
 
         # Determine recommended backend based on Pi model
         if self.pi_model == "5":
-            # Pi 5 requires Adafruit backend
-            if "adafruit_neopixel_spi" in available_backends:
+            # Pi 5 requires Adafruit PWM backend
+            if "adafruit_neopixel_pwm" in available_backends:
                 recommendation = {
                     "pi_model": self.pi_model,
-                    "recommended_backend": "adafruit_neopixel_spi",
-                    "reason": "Raspberry Pi 5 is only supported by the Adafruit CircuitPython NeoPixel SPI backend. "
+                    "recommended_backend": "adafruit_neopixel_pwm",
+                    "reason": "Raspberry Pi 5 is supported by the Adafruit CircuitPython NeoPixel (PWM) backend. "
+                    "You can use any GPIO pin (common choices: GPIO 10, 18, or 21). "
                     "The rpi_ws281x backend does not work reliably on Pi 5.",
                     "alternative": None,
                 }
@@ -67,20 +68,20 @@ class PluginWizard:
                 recommendation = {
                     "pi_model": self.pi_model,
                     "recommended_backend": None,
-                    "reason": "Raspberry Pi 5 requires the Adafruit CircuitPython NeoPixel SPI backend, "
+                    "reason": "Raspberry Pi 5 requires the Adafruit CircuitPython NeoPixel (PWM) backend, "
                     "but it is not installed. Please install the required dependencies.",
                     "alternative": None,
                 }
                 self._logger.warning(
-                    "Pi 5 detected but Adafruit backend not available! LED strip will not work."
+                    "Pi 5 detected but Adafruit PWM backend not available! LED strip will not work."
                 )
                 return recommendation
         else:
             # Pi 1-4 work best with rpi_ws281x
             if "rpi_ws281x" in available_backends:
                 alternative = (
-                    "adafruit_neopixel_spi"
-                    if "adafruit_neopixel_spi" in available_backends
+                    "adafruit_neopixel_pwm"
+                    if "adafruit_neopixel_pwm" in available_backends
                     else None
                 )
                 recommendation = {
@@ -95,18 +96,18 @@ class PluginWizard:
                 )
                 return recommendation
             else:
-                # Fallback to Adafruit if rpi_ws281x not available (shouldn't happen)
-                if "adafruit_neopixel_spi" in available_backends:
+                # Fallback to Adafruit PWM if rpi_ws281x not available (shouldn't happen)
+                if "adafruit_neopixel_pwm" in available_backends:
                     recommendation = {
                         "pi_model": self.pi_model,
-                        "recommended_backend": "adafruit_neopixel_spi",
+                        "recommended_backend": "adafruit_neopixel_pwm",
                         "reason": "The rpi_ws281x backend is not available. "
-                        "Using Adafruit CircuitPython NeoPixel SPI as alternative.",
+                        "Using Adafruit CircuitPython NeoPixel (PWM) as alternative.",
                         "alternative": None,
                     }
                     self._logger.warning(
                         f"Pi {self.pi_model}: rpi_ws281x backend not available, "
-                        f"falling back to Adafruit backend"
+                        f"falling back to Adafruit PWM backend"
                     )
                     return recommendation
                 else:

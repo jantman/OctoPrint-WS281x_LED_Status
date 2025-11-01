@@ -9,10 +9,10 @@ import sys
 
 # Mock the Adafruit libraries before importing the backend
 sys.modules["board"] = mock.MagicMock()
-sys.modules["neopixel_spi"] = mock.MagicMock()
+sys.modules["neopixel"] = mock.MagicMock()
 
-from octoprint_ws281x_led_status.backend.adafruit_neopixel_spi_backend import (
-    AdafruitNeoPixelSPIBackend,
+from octoprint_ws281x_led_status.backend.adafruit_neopixel_pwm_backend import (
+    AdafruitNeoPixelPWMBackend,
     map_strip_type_to_pixel_order,
     PIXEL_ORDERS,
 )
@@ -39,76 +39,107 @@ class TestPixelOrderMapping(unittest.TestCase):
 
 
 class TestAdafruitBackendInit(unittest.TestCase):
-    """Test Adafruit backend initialization."""
+    """Test Adafruit PWM backend initialization."""
 
     def test_init_with_minimal_config(self):
         """Test initialization with minimal configuration."""
-        config = {"count": 24}
-        backend = AdafruitNeoPixelSPIBackend(config)
+        config = {"count": 24, "pin": 10}
+        backend = AdafruitNeoPixelPWMBackend(config)
 
         self.assertEqual(backend.num_pixels(), 24)
         self.assertEqual(backend.get_brightness(), 255)  # Default 100%
         self.assertEqual(backend._pixel_order_str, "GRB")  # Default
+        self.assertEqual(backend._pin, 10)
 
     def test_init_with_full_config(self):
         """Test initialization with full configuration."""
         config = {
             "count": 50,
+            "pin": 18,
             "brightness": 75,
             "pixel_order": "RGB",
         }
-        backend = AdafruitNeoPixelSPIBackend(config)
+        backend = AdafruitNeoPixelPWMBackend(config)
 
         self.assertEqual(backend.num_pixels(), 50)
         self.assertEqual(backend.get_brightness(), 191)  # 75% of 255
         self.assertEqual(backend._pixel_order_str, "RGB")
+        self.assertEqual(backend._pin, 18)
 
     def test_init_maps_strip_type_to_pixel_order(self):
         """Test that strip type is mapped to pixel order if pixel_order not provided."""
-        config = {"count": 24, "type": "WS2811_STRIP_GRB"}
-        backend = AdafruitNeoPixelSPIBackend(config)
+        config = {"count": 24, "pin": 10, "type": "WS2811_STRIP_GRB"}
+        backend = AdafruitNeoPixelPWMBackend(config)
 
         self.assertEqual(backend._pixel_order_str, "GRB")
 
     def test_init_with_rgbw(self):
         """Test initialization with RGBW pixel order."""
-        config = {"count": 24, "pixel_order": "GRBW"}
-        backend = AdafruitNeoPixelSPIBackend(config)
+        config = {"count": 24, "pin": 10, "pixel_order": "GRBW"}
+        backend = AdafruitNeoPixelPWMBackend(config)
 
         self.assertTrue(backend._has_white)
-        self.assertEqual(len(backend._pixel_order), 4)
+        self.assertEqual(backend._pixel_order_str, "GRBW")
 
     def test_init_with_invalid_pixel_order_raises(self):
         """Test that invalid pixel order raises ValueError."""
-        config = {"count": 24, "pixel_order": "INVALID"}
+        config = {"count": 24, "pin": 10, "pixel_order": "INVALID"}
 
         with self.assertRaises(ValueError) as cm:
-            AdafruitNeoPixelSPIBackend(config)
+            AdafruitNeoPixelPWMBackend(config)
 
         self.assertIn("Invalid pixel order", str(cm.exception))
+
+    def test_init_without_pin_raises(self):
+        """Test that missing pin raises ValueError."""
+        config = {"count": 24}
+
+        with self.assertRaises(ValueError) as cm:
+            AdafruitNeoPixelPWMBackend(config)
+
+        self.assertIn("GPIO pin number is required", str(cm.exception))
+
+    def test_init_with_invalid_pin_raises(self):
+        """Test that invalid GPIO pin raises ValueError."""
+        # Pin too low
+        with self.assertRaises(ValueError) as cm:
+            AdafruitNeoPixelPWMBackend({"count": 24, "pin": -1})
+        self.assertIn("Invalid GPIO pin number", str(cm.exception))
+
+        # Pin too high
+        with self.assertRaises(ValueError) as cm:
+            AdafruitNeoPixelPWMBackend({"count": 24, "pin": 28})
+        self.assertIn("Invalid GPIO pin number", str(cm.exception))
+
+    def test_init_with_valid_common_pins(self):
+        """Test that common GPIO pins are accepted."""
+        for pin in [10, 18, 21]:
+            config = {"count": 24, "pin": pin}
+            backend = AdafruitNeoPixelPWMBackend(config)
+            self.assertEqual(backend._pin, pin)
 
     def test_brightness_percentage_conversion(self):
         """Test brightness conversion from percentage to float."""
         # 0%
-        backend = AdafruitNeoPixelSPIBackend({"count": 24, "brightness": 0})
+        backend = AdafruitNeoPixelPWMBackend({"count": 24, "pin": 10, "brightness": 0})
         self.assertEqual(backend.get_brightness(), 0)
 
         # 50%
-        backend = AdafruitNeoPixelSPIBackend({"count": 24, "brightness": 50})
+        backend = AdafruitNeoPixelPWMBackend({"count": 24, "pin": 10, "brightness": 50})
         self.assertEqual(backend.get_brightness(), 127)  # 50% of 255
 
         # 100%
-        backend = AdafruitNeoPixelSPIBackend({"count": 24, "brightness": 100})
+        backend = AdafruitNeoPixelPWMBackend({"count": 24, "pin": 10, "brightness": 100})
         self.assertEqual(backend.get_brightness(), 255)
 
 
 class TestAdafruitBackendMethods(unittest.TestCase):
-    """Test Adafruit backend methods with mocked NeoPixel_SPI."""
+    """Test Adafruit PWM backend methods with mocked NeoPixel."""
 
     def setUp(self):
         """Create mock backend for each test."""
-        self.config = {"count": 10, "brightness": 100, "pixel_order": "GRB"}
-        self.backend = AdafruitNeoPixelSPIBackend(self.config)
+        self.config = {"count": 10, "pin": 10, "brightness": 100, "pixel_order": "GRB"}
+        self.backend = AdafruitNeoPixelPWMBackend(self.config)
 
         # Mock the pixels object
         self.mock_pixels = mock.MagicMock()
@@ -124,8 +155,8 @@ class TestAdafruitBackendMethods(unittest.TestCase):
     def test_set_pixel_color_rgbw(self):
         """Test setting pixel color with RGBW values."""
         # Create RGBW backend
-        config = {"count": 10, "pixel_order": "RGBW"}
-        backend = AdafruitNeoPixelSPIBackend(config)
+        config = {"count": 10, "pin": 10, "pixel_order": "RGBW"}
+        backend = AdafruitNeoPixelPWMBackend(config)
         backend._pixels = mock.MagicMock()
 
         backend.set_pixel_color_rgb(3, 255, 128, 64, 32)
@@ -190,108 +221,99 @@ class TestAdafruitBackendMethods(unittest.TestCase):
         """Test cleanup turns off LEDs and deinits."""
         self.backend.cleanup()
 
-        self.mock_pixels.fill.assert_called_once_with(0)
+        # PWM backend uses tuple for fill, not packed integer
+        self.mock_pixels.fill.assert_called_once_with((0, 0, 0))
         self.mock_pixels.show.assert_called_once()
         self.mock_pixels.deinit.assert_called_once()
 
 
 class TestAdafruitBackendBegin(unittest.TestCase):
-    """Test Adafruit backend begin() method."""
+    """Test Adafruit PWM backend begin() method."""
 
-    @mock.patch("octoprint_ws281x_led_status.backend.adafruit_neopixel_spi_backend.board")
-    @mock.patch("octoprint_ws281x_led_status.backend.adafruit_neopixel_spi_backend.neopixel_spi")
-    def test_begin_creates_pixels(self, mock_neopixel_spi, mock_board):
-        """Test begin() creates NeoPixel_SPI object."""
-        mock_spi = mock.MagicMock()
-        mock_board.SPI.return_value = mock_spi
+    @mock.patch("octoprint_ws281x_led_status.backend.adafruit_neopixel_pwm_backend.board")
+    @mock.patch("octoprint_ws281x_led_status.backend.adafruit_neopixel_pwm_backend.NeoPixel")
+    def test_begin_creates_pixels(self, mock_neopixel, mock_board):
+        """Test begin() creates NeoPixel object."""
+        # Mock the board.D10 pin
+        mock_pin = mock.MagicMock()
+        mock_board.D10 = mock_pin
+
         mock_pixels = mock.MagicMock()
-        mock_neopixel_spi.NeoPixel_SPI.return_value = mock_pixels
+        mock_neopixel.return_value = mock_pixels
 
-        config = {"count": 24, "brightness": 75, "pixel_order": "GRB"}
-        backend = AdafruitNeoPixelSPIBackend(config)
+        config = {"count": 24, "pin": 10, "brightness": 75, "pixel_order": "GRB"}
+        backend = AdafruitNeoPixelPWMBackend(config)
         backend.begin()
 
-        # Verify NeoPixel_SPI was created with correct parameters
-        mock_neopixel_spi.NeoPixel_SPI.assert_called_once()
-        call_args = mock_neopixel_spi.NeoPixel_SPI.call_args
+        # Verify NeoPixel was created with correct parameters
+        mock_neopixel.assert_called_once()
+        call_args = mock_neopixel.call_args
 
-        self.assertEqual(call_args[0][0], mock_spi)  # SPI object
+        self.assertEqual(call_args[0][0], mock_pin)  # GPIO pin
         self.assertEqual(call_args[0][1], 24)  # num_pixels
-        self.assertEqual(call_args[1]["bpp"], 3)  # bytes per pixel (RGB)
         self.assertAlmostEqual(call_args[1]["brightness"], 0.75, places=2)
+        self.assertFalse(call_args[1]["auto_write"])
 
         # Verify pixels were initialized to off
-        mock_pixels.fill.assert_called_once_with(0)
+        mock_pixels.fill.assert_called_once_with((0, 0, 0))
         mock_pixels.show.assert_called_once()
 
-    @mock.patch("octoprint_ws281x_led_status.backend.adafruit_neopixel_spi_backend.board")
-    @mock.patch("octoprint_ws281x_led_status.backend.adafruit_neopixel_spi_backend.neopixel_spi")
-    def test_begin_with_rgbw(self, mock_neopixel_spi, mock_board):
+    @mock.patch("octoprint_ws281x_led_status.backend.adafruit_neopixel_pwm_backend.board")
+    @mock.patch("octoprint_ws281x_led_status.backend.adafruit_neopixel_pwm_backend.NeoPixel")
+    def test_begin_with_rgbw(self, mock_neopixel, mock_board):
         """Test begin() with RGBW pixel order."""
-        mock_spi = mock.MagicMock()
-        mock_board.SPI.return_value = mock_spi
-        mock_pixels = mock.MagicMock()
-        mock_neopixel_spi.NeoPixel_SPI.return_value = mock_pixels
+        # Mock the board.D10 pin
+        mock_pin = mock.MagicMock()
+        mock_board.D10 = mock_pin
 
-        config = {"count": 24, "pixel_order": "GRBW"}
-        backend = AdafruitNeoPixelSPIBackend(config)
+        mock_pixels = mock.MagicMock()
+        mock_neopixel.return_value = mock_pixels
+
+        config = {"count": 24, "pin": 10, "pixel_order": "GRBW"}
+        backend = AdafruitNeoPixelPWMBackend(config)
         backend.begin()
 
-        call_args = mock_neopixel_spi.NeoPixel_SPI.call_args
-        self.assertEqual(call_args[1]["bpp"], 4)  # bytes per pixel (RGBW)
+        # Verify pixels were initialized with RGBW tuple
+        mock_pixels.fill.assert_called_once_with((0, 0, 0, 0))
+
+    @mock.patch("octoprint_ws281x_led_status.backend.adafruit_neopixel_pwm_backend.board")
+    @mock.patch("octoprint_ws281x_led_status.backend.adafruit_neopixel_pwm_backend.NeoPixel")
+    def test_begin_with_different_pins(self, mock_neopixel, mock_board):
+        """Test begin() works with different GPIO pins."""
+        for pin_num in [10, 18, 21]:
+            # Mock the board.D{pin} attribute
+            mock_pin = mock.MagicMock()
+            setattr(mock_board, f"D{pin_num}", mock_pin)
+
+            mock_pixels = mock.MagicMock()
+            mock_neopixel.return_value = mock_pixels
+
+            config = {"count": 24, "pin": pin_num}
+            backend = AdafruitNeoPixelPWMBackend(config)
+            backend.begin()
+
+            # Verify the correct pin was used
+            call_args = mock_neopixel.call_args
+            self.assertEqual(call_args[0][0], mock_pin)
+
+            # Reset mocks for next iteration
+            mock_neopixel.reset_mock()
 
 
 class TestIsAvailable(unittest.TestCase):
-    """Test backend availability detection."""
+    """Test PWM backend availability detection."""
 
-    @mock.patch("os.access")
-    @mock.patch("os.path.exists")
-    @mock.patch("octoprint_ws281x_led_status.backend.adafruit_neopixel_spi_backend.ADAFRUIT_AVAILABLE", True)
-    def test_is_available_all_conditions_met(self, mock_exists, mock_access):
-        """Test is_available returns True when all conditions met."""
-        mock_exists.return_value = True
-        mock_access.return_value = True
+    @mock.patch("octoprint_ws281x_led_status.backend.adafruit_neopixel_pwm_backend.ADAFRUIT_AVAILABLE", True)
+    def test_is_available_libraries_installed(self):
+        """Test is_available returns True when libraries are installed."""
+        result = AdafruitNeoPixelPWMBackend.is_available()
+        self.assertTrue(result)
 
-        from octoprint_ws281x_led_status.backend.adafruit_neopixel_spi_backend import (
-            is_available,
-        )
-
-        self.assertTrue(is_available())
-
-    @mock.patch("octoprint_ws281x_led_status.backend.adafruit_neopixel_spi_backend.ADAFRUIT_AVAILABLE", False)
+    @mock.patch("octoprint_ws281x_led_status.backend.adafruit_neopixel_pwm_backend.ADAFRUIT_AVAILABLE", False)
     def test_is_available_libraries_not_installed(self):
         """Test is_available returns False when libraries not installed."""
-        from octoprint_ws281x_led_status.backend.adafruit_neopixel_spi_backend import (
-            is_available,
-        )
-
-        self.assertFalse(is_available())
-
-    @mock.patch("os.path.exists")
-    @mock.patch("octoprint_ws281x_led_status.backend.adafruit_neopixel_spi_backend.ADAFRUIT_AVAILABLE", True)
-    def test_is_available_spi_device_missing(self, mock_exists):
-        """Test is_available returns False when SPI device doesn't exist."""
-        mock_exists.return_value = False
-
-        from octoprint_ws281x_led_status.backend.adafruit_neopixel_spi_backend import (
-            is_available,
-        )
-
-        self.assertFalse(is_available())
-
-    @mock.patch("os.access")
-    @mock.patch("os.path.exists")
-    @mock.patch("octoprint_ws281x_led_status.backend.adafruit_neopixel_spi_backend.ADAFRUIT_AVAILABLE", True)
-    def test_is_available_spi_not_writable(self, mock_exists, mock_access):
-        """Test is_available returns False when SPI device not writable."""
-        mock_exists.return_value = True
-        mock_access.return_value = False
-
-        from octoprint_ws281x_led_status.backend.adafruit_neopixel_spi_backend import (
-            is_available,
-        )
-
-        self.assertFalse(is_available())
+        result = AdafruitNeoPixelPWMBackend.is_available()
+        self.assertFalse(result)
 
 
 if __name__ == "__main__":

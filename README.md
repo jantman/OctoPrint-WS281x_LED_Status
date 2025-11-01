@@ -42,7 +42,7 @@ Setting up the plugin couldn't be easier! There are 3 main steps, with configura
 
 Follow the detailed [setup guide](https://cp2004.gitbook.io/ws281x-led-status/guides/setup-guide-1) in the documentation to get up and running.
 
-**Note for Raspberry Pi 5 users:** This plugin now supports Pi 5 using the Adafruit CircuitPython NeoPixel SPI backend. See the documentation for setup instructions specific to Pi 5.
+**Note for Raspberry Pi 5 users:** This plugin now supports Pi 5 using the Adafruit CircuitPython NeoPixel (PWM) backend. See the documentation for setup instructions specific to Pi 5.
 
 ## Getting help
 

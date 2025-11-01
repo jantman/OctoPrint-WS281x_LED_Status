@@ -279,6 +279,18 @@ class TestFactoryFunctions(unittest.TestCase):
         metadata = registry.get_metadata("rpi_ws281x")
         self.assertIn("PWM", metadata["display_name"])
 
+    def test_adafruit_pwm_backend_registered_if_available(self):
+        """Test that Adafruit PWM backend is registered if dependencies available."""
+        registry = get_registry()
+
+        # Check if backend is registered
+        if registry.is_registered("adafruit_neopixel_pwm"):
+            # If registered, verify metadata
+            metadata = registry.get_metadata("adafruit_neopixel_pwm")
+            self.assertIn("PWM", metadata["display_name"])
+            self.assertIn("Adafruit", metadata["display_name"])
+            self.assertIn("PWM", metadata["description"])
+
     def test_get_available_backends(self):
         """Test that get_available_backends returns properly structured dict."""
         backends = get_available_backends()
