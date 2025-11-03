@@ -217,6 +217,14 @@ class AdafruitNeoPixelPWMBackend(LEDBackend):
         """
         return int(self._brightness * 255)
 
+    def setBrightness(self, value: int) -> None:
+        """
+        Compatibility alias for set_brightness() to match rpi_ws281x API.
+
+        The runner code calls this camelCase method directly.
+        """
+        self.set_brightness(value)
+
     def num_pixels(self) -> int:
         """
         Get the number of pixels.
