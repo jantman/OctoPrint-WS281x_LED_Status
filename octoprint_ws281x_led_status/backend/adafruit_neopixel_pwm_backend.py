@@ -32,22 +32,23 @@ except ImportError:
     ADAFRUIT_AVAILABLE = False
 
 
-# Pixel order constants mapping to neopixel library constants
+# Pixel order constants as tuples (R, G, B, [W])
+# The neopixel library uses tuples to represent the order of color components
 PIXEL_ORDERS = {
-    # RGB variations
-    "RGB": neopixel.RGB if ADAFRUIT_AVAILABLE else None,
-    "RBG": neopixel.RBG if ADAFRUIT_AVAILABLE else None,
-    "GRB": neopixel.GRB if ADAFRUIT_AVAILABLE else None,
-    "GBR": neopixel.GBR if ADAFRUIT_AVAILABLE else None,
-    "BRG": neopixel.BRG if ADAFRUIT_AVAILABLE else None,
-    "BGR": neopixel.BGR if ADAFRUIT_AVAILABLE else None,
-    # RGBW variations
-    "RGBW": neopixel.RGBW if ADAFRUIT_AVAILABLE else None,
-    "RBGW": neopixel.RBGW if ADAFRUIT_AVAILABLE else None,
-    "GRBW": neopixel.GRBW if ADAFRUIT_AVAILABLE else None,
-    "GBRW": neopixel.GBRW if ADAFRUIT_AVAILABLE else None,
-    "BRGW": neopixel.BRGW if ADAFRUIT_AVAILABLE else None,
-    "BGRW": neopixel.BGRW if ADAFRUIT_AVAILABLE else None,
+    # RGB variations (indices: R=0, G=1, B=2)
+    "RGB": (0, 1, 2),
+    "RBG": (0, 2, 1),
+    "GRB": (1, 0, 2),
+    "GBR": (1, 2, 0),
+    "BRG": (2, 0, 1),
+    "BGR": (2, 1, 0),
+    # RGBW variations (indices: R=0, G=1, B=2, W=3)
+    "RGBW": (0, 1, 2, 3),
+    "RBGW": (0, 2, 1, 3),
+    "GRBW": (1, 0, 2, 3),
+    "GBRW": (1, 2, 0, 3),
+    "BRGW": (2, 0, 1, 3),
+    "BGRW": (2, 1, 0, 3),
 }
 
 
