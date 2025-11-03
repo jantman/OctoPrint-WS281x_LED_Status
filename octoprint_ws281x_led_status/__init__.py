@@ -8,10 +8,9 @@ import os
 import re
 import time
 
-# Set multiprocessing start method to 'fork' for compatibility with Python 3.13+
-# This must be done before creating any multiprocessing objects
-if multiprocessing.get_start_method(allow_none=True) is None:
-    multiprocessing.set_start_method('fork')
+# Create a fork context for all multiprocessing objects
+# This ensures consistent context across Queue and Process for Python 3.13+ compatibility
+mp_context = multiprocessing.get_context('fork')
 
 # noinspection PyPackageRequirements
 import octoprint.plugin
@@ -56,7 +55,7 @@ class WS281xLedStatusPlugin(
         self.wizard = wizard.PluginWizard(PI_MODEL)
 
         self.current_effect_process = None  # type: multiprocessing.Process
-        self.effect_queue = multiprocessing.Queue()
+        self.effect_queue = mp_context.Queue()
 
         self.custom_triggers = triggers.Trigger(self.effect_queue)
 
@@ -347,7 +346,7 @@ class WS281xLedStatusPlugin(
         if self.current_effect_process and not self.current_effect_process.is_alive():
             self.stop_effect_process()
         # Start effect runner here
-        self.current_effect_process = multiprocessing.Process(
+        self.current_effect_process = mp_context.Process(
             target=EffectRunner,
             name="WS281x LED Status Effect Process",
             kwargs={
