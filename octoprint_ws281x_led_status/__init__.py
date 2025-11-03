@@ -8,6 +8,11 @@ import os
 import re
 import time
 
+# Set multiprocessing start method to 'fork' for compatibility with Python 3.13+
+# This must be done before creating any multiprocessing objects
+if multiprocessing.get_start_method(allow_none=True) is None:
+    multiprocessing.set_start_method('fork')
+
 # noinspection PyPackageRequirements
 import octoprint.plugin
 from octoprint.events import Events, all_events
