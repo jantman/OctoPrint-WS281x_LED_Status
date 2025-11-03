@@ -234,6 +234,14 @@ class AdafruitNeoPixelPWMBackend(LEDBackend):
         """
         return self._num_pixels
 
+    def numPixels(self) -> int:
+        """
+        Compatibility alias for num_pixels() to match rpi_ws281x API.
+
+        The effect code calls this camelCase method directly.
+        """
+        return self.num_pixels()
+
     def set_pixel_color(self, index: int, color: int) -> None:
         """
         Set pixel color using packed 32-bit integer.
@@ -278,6 +286,16 @@ class AdafruitNeoPixelPWMBackend(LEDBackend):
             self._buffer[index] = (r, g, b)
             # Set pixel with RGB only
             self._pixels[index] = (r, g, b)
+
+    def setPixelColorRGB(
+        self, index: int, r: int, g: int, b: int, w: int = 0
+    ) -> None:
+        """
+        Compatibility alias for set_pixel_color_rgb() to match rpi_ws281x API.
+
+        The effect code calls this camelCase method directly.
+        """
+        self.set_pixel_color_rgb(index, r, g, b, w)
 
     def get_pixel_color(self, index: int) -> int:
         """
