@@ -363,9 +363,17 @@ class EffectRunner:
             self.blank_leds(whole_strip=False)
 
     def standard_effect(self, mode):
+        # Handle "blank" as a special case - it's not in effect_settings
+        if mode == "blank":
+            self._logger.info(
+                f"[EFFECT] Blank mode: blanking LEDs, lights_on={self.lights_on}"
+            )
+            self.blank_leds(whole_strip=False)
+            return
+
         effect_settings = self.effect_settings[mode]
         torch_override = mode == "torch" and effect_settings.get("override_timer", False)
-        will_run = (self.lights_on and not mode == "blank") or torch_override
+        will_run = self.lights_on or torch_override
 
         if will_run:
             color = apply_color_correction(
@@ -388,8 +396,7 @@ class EffectRunner:
             )
         else:
             self._logger.info(
-                f"[EFFECT] Standard {mode} blocked: lights_on={self.lights_on}, "
-                f"mode={'blank' if mode == 'blank' else 'not blank'}, blanking LEDs instead"
+                f"[EFFECT] Standard {mode} blocked: lights_on=False, blanking LEDs instead"
             )
             self.blank_leds(whole_strip=False)
 
