@@ -615,12 +615,21 @@ class WS281xLedStatusPlugin(
         else:
             if self.heating:
                 # Currently heating, now stopping - go back to last event
+                self._logger.info(
+                    f"[STATE] Heating stopped by gcode: {gcode or cmd}"
+                )
                 self.heating = False
                 if self._printer.is_printing():
                     # If printing, go back to print progress immediately
+                    self._logger.info(
+                        f"[STATE] Transitioning from heating to print progress (current: {self.current_progress}%)"
+                    )
                     self.on_print_progress(progress=self.current_progress)
                 else:
                     # Otherwise go back to the previous effect
+                    self._logger.info(
+                        f"[STATE] Heating stopped, returning to previous effect: {self.previous_event or 'none'}"
+                    )
                     self.process_previous_event()
 
         self.custom_triggers.on_gcode_command(gcode, cmd)
@@ -673,8 +682,23 @@ class WS281xLedStatusPlugin(
 
             # Stop if current is above target
             if current_temp > target:
+                self._logger.info(
+                    f"[STATE] Heating complete: {heater} reached {current_temp}°C (target: {target}°C)"
+                )
                 self.heating = False
-                return abort()
+                if self._printer.is_printing():
+                    # If printing, go back to print progress immediately
+                    self._logger.info(
+                        f"[STATE] Transitioning from heating to print progress (current: {self.current_progress}%)"
+                    )
+                    self.on_print_progress(progress=self.current_progress)
+                else:
+                    # Otherwise go back to the previous effect
+                    self._logger.info(
+                        f"[STATE] Heating complete, returning to previous effect: {self.previous_event or 'none'}"
+                    )
+                    self.process_previous_event()
+                return parsed_temps
 
             self.update_effect(
                 {
