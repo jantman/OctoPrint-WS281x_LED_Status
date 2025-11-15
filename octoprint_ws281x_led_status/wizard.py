@@ -336,7 +336,7 @@ class PluginWizard:
 
     def is_core_freq_min_set(self):
         """Check if core_freq_min is set. Uses Pi-model-specific config file path."""
-        result = {"check": api.WIZ_SET_CORE_FREQ, "passed": False, "reason": "failed"}
+        result = {"check": api.WIZ_SET_FREQ_MIN, "passed": False, "reason": "failed"}
 
         if self.pi_model == "4":
             # Pi 4 has a variable clock speed, which messes up SPI timing
@@ -347,7 +347,7 @@ class PluginWizard:
                     for line in file:
                         if line.startswith("core_freq_min=500"):
                             result = {
-                                "check": api.WIZ_SET_CORE_FREQ,
+                                "check": api.WIZ_SET_FREQ_MIN,
                                 "passed": True,
                                 "reason": "",
                             }
@@ -355,7 +355,7 @@ class PluginWizard:
                 pass
         else:
             result = {
-                "check": api.WIZ_SET_CORE_FREQ,
+                "check": api.WIZ_SET_FREQ_MIN,
                 "passed": True,
                 "reason": "not_required",
             }

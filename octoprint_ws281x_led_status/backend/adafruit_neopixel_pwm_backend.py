@@ -129,10 +129,6 @@ class AdafruitNeoPixelPWMBackend(LEDBackend):
             raise ValueError("GPIO pin number is required (config['pin'])")
         self._pin = int(config["pin"])
 
-        # Validate pin number (basic range check)
-        if self._pin < 0 or self._pin > 27:
-            raise ValueError(f"Invalid GPIO pin number: {self._pin} (must be 0-27)")
-
         # Brightness: convert percentage (0-100) to float (0.0-1.0)
         brightness_percent = int(config.get("brightness", 100))
         self._brightness = max(0.0, min(1.0, brightness_percent / 100.0))
@@ -159,8 +155,8 @@ class AdafruitNeoPixelPWMBackend(LEDBackend):
         # Auto-write should be False to allow buffering
         self._auto_write = config.get("auto_write", False)
 
-        # Buffer for pixel colors (stored as (r, g, b) or (r, g, b, w) tuples)
-        self._buffer = [(0, 0, 0, 0) if self._has_white else (0, 0, 0)] * self._num_pixels
+        # Buffer for pixel colors (always stored as (r, g, b, w) 4-tuples for consistency)
+        self._buffer = [(0, 0, 0, 0)] * self._num_pixels
 
     def begin(self) -> None:
         """
@@ -287,14 +283,13 @@ class AdafruitNeoPixelPWMBackend(LEDBackend):
         if index < 0 or index >= self._num_pixels:
             return
 
-        # Store in buffer
+        # Always store as 4-tuple in buffer for consistency
+        self._buffer[index] = (r, g, b, w)
+
+        # Set pixel with appropriate tuple size for hardware
         if self._has_white:
-            self._buffer[index] = (r, g, b, w)
-            # Set pixel with RGBW
             self._pixels[index] = (r, g, b, w)
         else:
-            self._buffer[index] = (r, g, b)
-            # Set pixel with RGB only
             self._pixels[index] = (r, g, b)
 
     def setPixelColorRGB(
@@ -333,13 +328,8 @@ class AdafruitNeoPixelPWMBackend(LEDBackend):
         if index < 0 or index >= self._num_pixels:
             return (0, 0, 0, 0)
 
-        # Get from buffer
-        if self._has_white:
-            r, g, b, w = self._buffer[index]
-            return (r, g, b, w)
-        else:
-            r, g, b = self._buffer[index]
-            return (r, g, b, 0)
+        # Buffer always contains 4-tuples
+        return self._buffer[index]
 
     def cleanup(self) -> None:
         """Clean up resources and turn off all LEDs."""
