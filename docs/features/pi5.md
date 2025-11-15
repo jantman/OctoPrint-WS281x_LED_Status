@@ -979,15 +979,64 @@ Comprehensive testing on Pi 5 hardware.
 
 ---
 
+#### Task 6.11: Runtime Bug Fixes from Pi 5 Deployment
+
+During deployment and testing on actual Raspberry Pi 5 hardware, several runtime bugs were discovered and fixed:
+
+**6.11a - Pixel Order Constants (df0eb52, reverted portion)**
+- Fixed AttributeError: `module 'neopixel' has no attribute 'RBG'`
+- Changed PIXEL_ORDERS to use tuples directly instead of neopixel constants
+- Example: `"RGB": (0, 1, 2)` instead of `neopixel.RGB`
+
+**6.11b - Multiprocessing Context for Python 3.13 (c501791, bb22f90)**
+- Fixed RuntimeError: "SemLock created in fork context being shared with spawn context"
+- Created explicit fork context: `mp_context = multiprocessing.get_context('fork')`
+- Used context consistently for Queue and Process creation
+- Ensures Python 3.13 compatibility
+
+**6.11c - CamelCase API Compatibility (76fdd3f)**
+- Fixed AttributeError: `'AdafruitNeoPixelPWMBackend' object has no attribute 'setBrightness'`
+- Added camelCase compatibility aliases to PWM backend for rpi_ws281x API:
+  - `setBrightness()` → `set_brightness()`
+  - `numPixels()` → `num_pixels()`
+  - `setPixelColorRGB()` → `set_pixel_color_rgb()`
+- Runner/effects code uses rpi_ws281x naming conventions
+
+**6.11d - Debug Logging for State Tracking (5b2f739)**
+- Added comprehensive debug logging with tagged categories
+- `[TRIGGER]` - When events/messages trigger effects
+- `[STATE]` - State transitions (lights on/off, heating/cooling)
+- `[EFFECT]` - Effect execution with RGB colors and parameters
+- Helps diagnose LED behavior issues
+
+**6.11e - Heating to Printing Transition (c501791)**
+- Fixed LEDs staying on heatup progress instead of transitioning to printing effect
+- When heating completes (temp reaches target), now checks `is_printing()`
+- If printing, transitions to printing effect; otherwise restores previous effect
+- Added debug logging for heating completion transitions
+
+**6.11f - Blank Mode KeyError (df0eb52)**
+- Fixed KeyError when turning lights off via `standard_effect("blank")`
+- "blank" is internal mode, not in effect_settings dictionary
+- Added special case handling before accessing effect_settings
+- Prevents crash when switching lights off
+
+**Commits:** 76fdd3f, bb22f90, 5b2f739, c501791, df0eb52
+
+---
+
 **Milestone 6 Completion Criteria:**
-- [ ] PWM backend implemented and tested
-- [ ] SPI backend removed from codebase
-- [ ] GPIO pin configurable in UI
-- [ ] Wizard recommends PWM backend for Pi 5
-- [ ] All unit tests passing (117+)
-- [ ] LEDs working on actual Pi 5 hardware
-- [ ] Documentation updated
-- [ ] Dependencies updated
+- [x] PWM backend implemented and tested
+- [x] SPI backend removed from codebase
+- [x] GPIO pin configurable in UI
+- [x] Wizard recommends PWM backend for Pi 5
+- [x] All unit tests passing (117+ tests)
+- [x] LEDs working on actual Pi 5 hardware
+- [x] Documentation updated
+- [x] Dependencies updated
+- [x] Runtime bugs fixed through real-world testing
+
+**Status: ✅ COMPLETED** (All tasks including runtime bug fixes complete)
 
 **Priority:** High (Bug Fix - SPI backend non-functional)
 **Estimated Effort:** 3-4 days
@@ -1003,3 +1052,4 @@ Comprehensive testing on Pi 5 hardware.
 - Simpler configuration (no SPI device requirements)
 - Proven to work on user's hardware
 - Better user experience
+- Robust error handling through extensive real-world testing
