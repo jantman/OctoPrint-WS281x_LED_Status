@@ -17,6 +17,16 @@ class RpiWS281xBackend(LEDBackend):
     This backend wraps the rpi_ws281x.PixelStrip class to provide LED control
     on Raspberry Pi 3, 4, and older models using PWM or PCM.
 
+    OS Requirements:
+        - User must be in 'gpio' group
+        - SPI must be enabled in /boot/config.txt
+        - SPI buffer size increase recommended (spidev.bufsiz=32768 in /boot/cmdline.txt)
+        - Core frequency settings required for Pi 3 (core_freq=250) and Pi 4 (core_freq_min=500)
+
+    IMPORTANT: Wizard test requirements for this backend are defined in:
+        octoprint_ws281x_led_status/wizard.py::BACKEND_TEST_REQUIREMENTS["rpi_ws281x"]
+    If you modify the OS requirements for this backend, update the wizard tests accordingly.
+
     Configuration keys:
         count (int): Number of LEDs in the strip
         pin (int): GPIO pin connected to the strip (default: 10)

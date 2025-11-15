@@ -15,6 +15,16 @@ Key features:
 - Supports RGB and RGBW pixel orders
 - Software-based brightness control
 - No special group membership or configuration required
+
+OS Requirements:
+- None! Works out of the box with standard GPIO permissions.
+- No SPI configuration needed
+- No special group membership needed
+- No core frequency settings needed
+
+IMPORTANT: Wizard test requirements for this backend are defined in:
+    octoprint_ws281x_led_status/wizard.py::BACKEND_TEST_REQUIREMENTS["adafruit_neopixel_pwm"]
+If you modify the OS requirements for this backend, update the wizard tests accordingly.
 """
 
 from typing import Any, Dict, Tuple

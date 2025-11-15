@@ -12,6 +12,31 @@ from octoprint_ws281x_led_status.backend.factory import get_registry
 from octoprint_ws281x_led_status.util import run_system_command
 
 
+# Backend-specific test requirements
+# Maps backend names to their required validation tests
+BACKEND_TEST_REQUIREMENTS = {
+    "rpi_ws281x": {
+        "required_tests": [
+            api.WIZ_ADDUSER,  # User must be in gpio group
+            api.WIZ_ENABLE_SPI,  # SPI must be enabled
+            api.WIZ_INCREASE_BUFFER,  # SPI buffer size increase recommended
+            api.WIZ_SET_CORE_FREQ,  # Core freq settings for Pi 3
+            api.WIZ_SET_FREQ_MIN,  # Core freq min for Pi 4
+        ],
+        "description": "rpi_ws281x backend requires SPI enabled and specific OS configuration",
+        "group": "gpio",  # Required group membership
+    },
+    "adafruit_neopixel_pwm": {
+        "required_tests": [
+            # No special OS configuration needed for PWM backend
+            # GPIO access is handled by standard permissions
+        ],
+        "description": "Adafruit PWM backend works out of the box on Pi 5 with standard GPIO access",
+        "group": None,  # No special group required (standard user permissions sufficient)
+    },
+}
+
+
 class PluginWizard:
     def __init__(self, pi_model):
         self._logger = logging.getLogger("octoprint.plugins.ws281x_led_status.wizard")
@@ -31,6 +56,49 @@ class PluginWizard:
             return self.run_wizard_command(cmd, data)
 
         return self.on_api_get()
+
+    def get_config_txt_path(self):
+        """
+        Get the path to config.txt based on Pi model.
+
+        Returns:
+            str: Path to config.txt file
+        """
+        if self.pi_model == "5":
+            return "/boot/firmware/config.txt"
+        else:
+            return "/boot/config.txt"
+
+    def get_cmdline_txt_path(self):
+        """
+        Get the path to cmdline.txt based on Pi model.
+
+        Returns:
+            str: Path to cmdline.txt file
+        """
+        if self.pi_model == "5":
+            return "/boot/firmware/cmdline.txt"
+        else:
+            return "/boot/cmdline.txt"
+
+    def get_required_tests_for_backend(self, backend_name):
+        """
+        Get the list of required OS configuration tests for a specific backend.
+
+        Args:
+            backend_name (str): Name of the backend (e.g., "rpi_ws281x", "adafruit_neopixel_pwm")
+
+        Returns:
+            list: List of test command names (e.g., [api.WIZ_ADDUSER, api.WIZ_ENABLE_SPI])
+        """
+        if backend_name not in BACKEND_TEST_REQUIREMENTS:
+            self._logger.warning(
+                f"Backend '{backend_name}' not in test requirements, defaulting to all tests"
+            )
+            # Default to rpi_ws281x tests if backend unknown
+            return BACKEND_TEST_REQUIREMENTS["rpi_ws281x"]["required_tests"]
+
+        return BACKEND_TEST_REQUIREMENTS[backend_name]["required_tests"]
 
     def get_backend_recommendation(self):
         """
@@ -124,14 +192,31 @@ class PluginWizard:
 
     def on_api_get(self, **kwargs):
         # Wizard specific API
-        return {
-            "adduser_done": self.validate(api.WIZ_ADDUSER),
-            "spi_enabled": self.validate(api.WIZ_ENABLE_SPI),
-            "spi_buffer_increase": self.validate(api.WIZ_INCREASE_BUFFER),
-            "core_freq_set": self.validate(api.WIZ_SET_CORE_FREQ),
-            "core_freq_min_set": self.validate(api.WIZ_SET_FREQ_MIN),
-            "backend_recommendation": self.get_backend_recommendation(),
-        }
+        backend_recommendation = self.get_backend_recommendation()
+        recommended_backend = backend_recommendation.get("recommended_backend")
+
+        # Determine which tests are required for the recommended backend
+        if recommended_backend:
+            required_tests = self.get_required_tests_for_backend(recommended_backend)
+        else:
+            # No backend available, show all tests to help diagnose issues
+            required_tests = BACKEND_TEST_REQUIREMENTS["rpi_ws281x"]["required_tests"]
+
+        # Only run and return tests that are required for the recommended backend
+        result = {"backend_recommendation": backend_recommendation}
+
+        if api.WIZ_ADDUSER in required_tests:
+            result["adduser_done"] = self.validate(api.WIZ_ADDUSER)
+        if api.WIZ_ENABLE_SPI in required_tests:
+            result["spi_enabled"] = self.validate(api.WIZ_ENABLE_SPI)
+        if api.WIZ_INCREASE_BUFFER in required_tests:
+            result["spi_buffer_increase"] = self.validate(api.WIZ_INCREASE_BUFFER)
+        if api.WIZ_SET_CORE_FREQ in required_tests:
+            result["core_freq_set"] = self.validate(api.WIZ_SET_CORE_FREQ)
+        if api.WIZ_SET_FREQ_MIN in required_tests:
+            result["core_freq_min_set"] = self.validate(api.WIZ_SET_FREQ_MIN)
+
+        return result
 
     def validate(self, cmd):
         validators = {
@@ -163,27 +248,42 @@ class PluginWizard:
             result = {"check": api.WIZ_ADDUSER, "passed": True, "reason": ""}
         return result
 
-    @staticmethod
-    def is_spi_enabled():
+    def is_spi_enabled(self):
+        """Check if SPI is enabled. Uses Pi-model-specific config file path."""
         result = {"check": api.WIZ_ENABLE_SPI, "passed": False, "reason": "failed"}
-        with open("/boot/config.txt") as file:
-            for line in file:
-                if line.startswith("dtparam=spi=on"):
-                    result = {"check": api.WIZ_ENABLE_SPI, "passed": True, "reason": ""}
+        config_path = self.get_config_txt_path()
+
+        try:
+            with open(config_path) as file:
+                for line in file:
+                    if line.startswith("dtparam=spi=on"):
+                        result = {"check": api.WIZ_ENABLE_SPI, "passed": True, "reason": ""}
+                        return result
+        except FileNotFoundError:
+            # Config file doesn't exist - check if /dev/spidev0.0 exists as fallback (Pi 5)
+            if self.pi_model == "5" and os.path.exists("/dev/spidev0.0"):
+                result = {"check": api.WIZ_ENABLE_SPI, "passed": True, "reason": "device_exists"}
+
         return result
 
-    @staticmethod
-    def is_spi_buffer_increased():
+    def is_spi_buffer_increased(self):
+        """Check if SPI buffer is increased. Uses Pi-model-specific cmdline.txt path."""
         result = {"check": api.WIZ_INCREASE_BUFFER, "passed": False, "reason": "failed"}
-        # Check `/boot/cmdline.txt` first
-        with open("/boot/cmdline.txt") as file:
-            for line in file:
-                if "spidev.bufsiz=32768" in line:
-                    return {
-                        "check": api.WIZ_INCREASE_BUFFER,
-                        "passed": True,
-                        "reason": "",
-                    }
+        cmdline_path = self.get_cmdline_txt_path()
+
+        # Check cmdline.txt first
+        try:
+            with open(cmdline_path) as file:
+                for line in file:
+                    if "spidev.bufsiz=32768" in line:
+                        return {
+                            "check": api.WIZ_INCREASE_BUFFER,
+                            "passed": True,
+                            "reason": "",
+                        }
+        except FileNotFoundError:
+            pass
+
         if not result["passed"]:
             # Check sys modules next - this is higher reliability but needs a reboot for changes
             # Wrapped in it's own try-catch as it might not exist if SPI is not enabled
@@ -204,42 +304,55 @@ class PluginWizard:
         return result
 
     def is_core_freq_set(self):
+        """Check if core_freq is set. Uses Pi-model-specific config file path."""
         result = {
             "check": api.WIZ_SET_CORE_FREQ,
-            "passed": True if self.pi_model == "4" else False,
-            "reason": "not_required" if self.pi_model == "4" else "failed",
+            "passed": True if self.pi_model in ["4", "5"] else False,
+            "reason": "not_required" if self.pi_model in ["4", "5"] else "failed",
         }
 
-        with open("/boot/config.txt") as file:
-            for line in file:
-                if line.startswith("core_freq=250"):
-                    if self.pi_model == "4":
-                        result = {
-                            "check": api.WIZ_SET_CORE_FREQ,
-                            "passed": False,
-                            "reason": "pi4_250",
-                        }
-                    else:
-                        result = {
-                            "check": api.WIZ_SET_CORE_FREQ,
-                            "passed": True,
-                            "reason": "",
-                        }
+        config_path = self.get_config_txt_path()
+
+        try:
+            with open(config_path) as file:
+                for line in file:
+                    if line.startswith("core_freq=250"):
+                        if self.pi_model in ["4", "5"]:
+                            result = {
+                                "check": api.WIZ_SET_CORE_FREQ,
+                                "passed": False,
+                                "reason": "pi4_250",
+                            }
+                        else:
+                            result = {
+                                "check": api.WIZ_SET_CORE_FREQ,
+                                "passed": True,
+                                "reason": "",
+                            }
+        except FileNotFoundError:
+            pass
+
         return result
 
     def is_core_freq_min_set(self):
+        """Check if core_freq_min is set. Uses Pi-model-specific config file path."""
         result = {"check": api.WIZ_SET_CORE_FREQ, "passed": False, "reason": "failed"}
 
         if self.pi_model == "4":
             # Pi 4 has a variable clock speed, which messes up SPI timing
-            with open("/boot/config.txt") as file:
-                for line in file:
-                    if line.startswith("core_freq_min=500"):
-                        result = {
-                            "check": api.WIZ_SET_CORE_FREQ,
-                            "passed": True,
-                            "reason": "",
-                        }
+            config_path = self.get_config_txt_path()
+
+            try:
+                with open(config_path) as file:
+                    for line in file:
+                        if line.startswith("core_freq_min=500"):
+                            result = {
+                                "check": api.WIZ_SET_CORE_FREQ,
+                                "passed": True,
+                                "reason": "",
+                            }
+            except FileNotFoundError:
+                pass
         else:
             result = {
                 "check": api.WIZ_SET_CORE_FREQ,
@@ -249,6 +362,9 @@ class PluginWizard:
         return result
 
     def run_wizard_command(self, cmd, data):
+        config_txt = self.get_config_txt_path()
+        cmdline_txt = self.get_cmdline_txt_path()
+
         command_to_system = {
             # -S for sudo commands means accept password from stdin, see https://www.sudo.ws/man/1.8.13/sudo.man.html#S
             api.WIZ_ADDUSER: ["sudo", "-S", "adduser", getpass.getuser(), "gpio"],
@@ -257,15 +373,15 @@ class PluginWizard:
                 "-S",
                 "bash",
                 "-c",
-                "echo 'dtparam=spi=on' >> /boot/config.txt",
+                f"echo 'dtparam=spi=on' >> {config_txt}",
             ],
             api.WIZ_SET_CORE_FREQ: [
                 "sudo",
                 "-S",
                 "bash",
                 "-c",
-                "echo 'core_freq=250' >> /boot/config.txt"
-                if self.pi_model != "4"
+                f"echo 'core_freq=250' >> {config_txt}"
+                if self.pi_model not in ["4", "5"]
                 else "",
             ],
             api.WIZ_SET_FREQ_MIN: [
@@ -273,7 +389,7 @@ class PluginWizard:
                 "-S",
                 "bash",
                 "-c",
-                "echo 'core_freq_min=500' >> /boot/config.txt"
+                f"echo 'core_freq_min=500' >> {config_txt}"
                 if self.pi_model == "4"
                 else "",
             ],
@@ -283,7 +399,7 @@ class PluginWizard:
                 "sed",
                 "-i",
                 "$ s/$/ spidev.bufsiz=32768/",
-                "/boot/cmdline.txt",
+                cmdline_txt,
             ],
         }
         sys_command = command_to_system[cmd]
