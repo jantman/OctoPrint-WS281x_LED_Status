@@ -313,3 +313,166 @@ class TestWizardBackendRecommendation(unittest.TestCase):
         self.assertEqual(recommendation["pi_model"], "4")
         self.assertIsNone(recommendation["recommended_backend"])
         self.assertIn("No compatible", recommendation["reason"])
+
+
+class TestWizardBackendAwareTests(unittest.TestCase):
+    """Test backend-aware OS configuration tests"""
+
+    def test_get_required_tests_for_rpi_ws281x(self):
+        """rpi_ws281x backend should require all OS config tests"""
+        from octoprint_ws281x_led_status import api
+
+        wizard = PluginWizard(pi_model="4")
+        required_tests = wizard.get_required_tests_for_backend("rpi_ws281x")
+
+        # Should require all tests
+        self.assertIn(api.WIZ_ADDUSER, required_tests)
+        self.assertIn(api.WIZ_ENABLE_SPI, required_tests)
+        self.assertIn(api.WIZ_INCREASE_BUFFER, required_tests)
+        self.assertIn(api.WIZ_SET_CORE_FREQ, required_tests)
+        self.assertIn(api.WIZ_SET_FREQ_MIN, required_tests)
+
+    def test_get_required_tests_for_adafruit_pwm(self):
+        """Adafruit PWM backend should require no OS config tests"""
+        wizard = PluginWizard(pi_model="5")
+        required_tests = wizard.get_required_tests_for_backend("adafruit_neopixel_pwm")
+
+        # Should require no tests (works out of the box)
+        self.assertEqual(len(required_tests), 0)
+
+    def test_get_required_tests_unknown_backend(self):
+        """Unknown backend should default to rpi_ws281x tests"""
+        from octoprint_ws281x_led_status import api
+
+        wizard = PluginWizard(pi_model="4")
+        required_tests = wizard.get_required_tests_for_backend("unknown_backend")
+
+        # Should default to rpi_ws281x tests
+        self.assertIn(api.WIZ_ADDUSER, required_tests)
+        self.assertIn(api.WIZ_ENABLE_SPI, required_tests)
+
+    @mock.patch("octoprint_ws281x_led_status.wizard.get_registry")
+    @mock.patch.object(PluginWizard, "validate")
+    def test_on_api_get_pi5_pwm_no_tests(self, mock_validate, mock_get_registry):
+        """Pi 5 with PWM backend should run no OS config tests"""
+        # Mock registry to recommend Adafruit PWM backend
+        mock_registry = mock.Mock()
+        mock_registry.list_backends.return_value = ["adafruit_neopixel_pwm"]
+        mock_get_registry.return_value = mock_registry
+
+        wizard = PluginWizard(pi_model="5")
+        result = wizard.on_api_get()
+
+        # Should not run any tests
+        mock_validate.assert_not_called()
+
+        # Should return backend recommendation
+        self.assertIn("backend_recommendation", result)
+        self.assertEqual(result["backend_recommendation"]["pi_model"], "5")
+        self.assertEqual(
+            result["backend_recommendation"]["recommended_backend"],
+            "adafruit_neopixel_pwm",
+        )
+
+        # Should not include test results
+        self.assertNotIn("adduser_done", result)
+        self.assertNotIn("spi_enabled", result)
+        self.assertNotIn("spi_buffer_increase", result)
+
+    @mock.patch("octoprint_ws281x_led_status.wizard.get_registry")
+    @mock.patch.object(PluginWizard, "validate")
+    def test_on_api_get_pi4_rpi_ws281x_all_tests(
+        self, mock_validate, mock_get_registry
+    ):
+        """Pi 4 with rpi_ws281x backend should run all OS config tests"""
+        from octoprint_ws281x_led_status import api
+
+        # Mock registry to recommend rpi_ws281x backend
+        mock_registry = mock.Mock()
+        mock_registry.list_backends.return_value = ["rpi_ws281x"]
+        mock_get_registry.return_value = mock_registry
+
+        # Mock validate to return passed=True
+        mock_validate.return_value = {"check": "test", "passed": True, "reason": ""}
+
+        wizard = PluginWizard(pi_model="4")
+        result = wizard.on_api_get()
+
+        # Should run all tests
+        self.assertEqual(mock_validate.call_count, 5)
+        mock_validate.assert_any_call(api.WIZ_ADDUSER)
+        mock_validate.assert_any_call(api.WIZ_ENABLE_SPI)
+        mock_validate.assert_any_call(api.WIZ_INCREASE_BUFFER)
+        mock_validate.assert_any_call(api.WIZ_SET_CORE_FREQ)
+        mock_validate.assert_any_call(api.WIZ_SET_FREQ_MIN)
+
+        # Should include all test results
+        self.assertIn("adduser_done", result)
+        self.assertIn("spi_enabled", result)
+        self.assertIn("spi_buffer_increase", result)
+        self.assertIn("core_freq_set", result)
+        self.assertIn("core_freq_min_set", result)
+
+
+class TestWizardPiModelPaths(unittest.TestCase):
+    """Test Pi-model-specific file paths"""
+
+    def test_get_config_txt_path_pi5(self):
+        """Pi 5 should use /boot/firmware/config.txt"""
+        wizard = PluginWizard(pi_model="5")
+        path = wizard.get_config_txt_path()
+        self.assertEqual(path, "/boot/firmware/config.txt")
+
+    def test_get_config_txt_path_pi4(self):
+        """Pi 4 should use /boot/config.txt"""
+        wizard = PluginWizard(pi_model="4")
+        path = wizard.get_config_txt_path()
+        self.assertEqual(path, "/boot/config.txt")
+
+    def test_get_config_txt_path_pi3(self):
+        """Pi 3 should use /boot/config.txt"""
+        wizard = PluginWizard(pi_model="3")
+        path = wizard.get_config_txt_path()
+        self.assertEqual(path, "/boot/config.txt")
+
+    def test_get_cmdline_txt_path_pi5(self):
+        """Pi 5 should use /boot/firmware/cmdline.txt"""
+        wizard = PluginWizard(pi_model="5")
+        path = wizard.get_cmdline_txt_path()
+        self.assertEqual(path, "/boot/firmware/cmdline.txt")
+
+    def test_get_cmdline_txt_path_pi4(self):
+        """Pi 4 should use /boot/cmdline.txt"""
+        wizard = PluginWizard(pi_model="4")
+        path = wizard.get_cmdline_txt_path()
+        self.assertEqual(path, "/boot/cmdline.txt")
+
+    def test_is_core_freq_set_pi5_not_required(self):
+        """Pi 5 should not require core_freq setting"""
+        wizard = PluginWizard(pi_model="5")
+        result = wizard.is_core_freq_set()
+
+        self.assertTrue(result["passed"])
+        self.assertEqual(result["reason"], "not_required")
+
+    @mock.patch("builtins.open", mock.mock_open(read_data="# test config\n"))
+    def test_is_spi_enabled_uses_pi5_path(self):
+        """is_spi_enabled should use Pi-specific config path"""
+        wizard = PluginWizard(pi_model="5")
+
+        with mock.patch("builtins.open", mock.mock_open(read_data="# test\n")) as m:
+            wizard.is_spi_enabled()
+            m.assert_called_with("/boot/firmware/config.txt")
+
+    @mock.patch("os.path.exists")
+    @mock.patch("builtins.open", side_effect=FileNotFoundError)
+    def test_is_spi_enabled_pi5_fallback_to_device(self, mock_open, mock_exists):
+        """Pi 5 should check for /dev/spidev0.0 if config file missing"""
+        mock_exists.return_value = True
+
+        wizard = PluginWizard(pi_model="5")
+        result = wizard.is_spi_enabled()
+
+        self.assertTrue(result["passed"])
+        self.assertEqual(result["reason"], "device_exists")
+        mock_exists.assert_called_with("/dev/spidev0.0")
