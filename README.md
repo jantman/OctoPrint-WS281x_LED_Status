@@ -44,6 +44,26 @@ Follow the detailed [setup guide](https://cp2004.gitbook.io/ws281x-led-status/gu
 
 **Note for Raspberry Pi 5 users:** This plugin now supports Pi 5 using the Adafruit CircuitPython NeoPixel (PWM) backend. See the documentation for setup instructions specific to Pi 5.
 
+## Raspberry Pi 5 Support
+
+This plugin now supports **all Raspberry Pi models including Pi 5** through a flexible LED backend system:
+
+- **Pi 1-4, Zero**: Use the `rpi_ws281x` backend (default, fully backward compatible)
+- **Pi 5**: Use the `Adafruit CircuitPython NeoPixel (PWM)` backend
+
+**Key features:**
+- Multiple backend support with easy selection in plugin settings
+- Pi 5 backend supports any GPIO pin (not limited to specific pins)
+- No special OS configuration required for Pi 5 (no SPI setup needed)
+- All plugin features work identically with both backends
+- Automatic dependency installation via OctoPrint Plugin Manager
+
+**Quick setup for Pi 5:**
+1. Install plugin normally through Plugin Manager
+2. In plugin settings, select "Adafruit CircuitPython NeoPixel (PWM)" backend
+3. Configure your GPIO pin (default: 18) and pixel order (usually GRB)
+4. Restart OctoPrint and you're ready!
+
 ## Getting help
 
 Please read the [Get Help Guide](https://cp2004.gitbook.io/ws281x-led-status/guides/get-help-guide) as well as the [rest of the documentation](https://cp2004.gitbook.io/ws281x-led-status/), to see if your question has been answered there. Still got questions? Get in touch:
