@@ -27,11 +27,20 @@ IMPORTANT: Wizard test requirements for this backend are defined in:
 If you modify the OS requirements for this backend, update the wizard tests accordingly.
 """
 
+import os
+import tempfile
 from typing import Any, Dict, Tuple
 
 from octoprint_ws281x_led_status.backend import LEDBackend
 
 # Try to import Adafruit libraries - they may not be installed
+# Note: The lgpio library (used by Adafruit Blinka on Pi 5) creates notification
+# files (.lgd-nfy*) in its working directory. We set the LG_WD environment variable
+# to ensure these files are created in a writable location (the system temp directory)
+# rather than the current working directory (which may be / for services like OctoPrint).
+if 'LG_WD' not in os.environ:
+    os.environ['LG_WD'] = tempfile.gettempdir()
+
 try:
     import board
     from neopixel import NeoPixel

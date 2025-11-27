@@ -12,15 +12,18 @@ from octoprint_ws281x_led_status.backend.rpi_ws281x_backend import RpiWS281xBack
 _logger = logging.getLogger("octoprint.plugins.ws281x_led_status.backend.factory")
 
 # Try to import Adafruit PWM backend - may not be available
+# Note: This can fail due to missing dependencies OR due to issues with lgpio
+# initialization (e.g., working directory permissions). We catch both cases.
 try:
     from octoprint_ws281x_led_status.backend.adafruit_neopixel_pwm_backend import (
         AdafruitNeoPixelPWMBackend,
     )
 
     ADAFRUIT_BACKEND_AVAILABLE = True
-except ImportError:
+except (ImportError, FileNotFoundError, OSError) as e:
     ADAFRUIT_BACKEND_AVAILABLE = False
     AdafruitNeoPixelPWMBackend = None
+    _logger.debug(f"Adafruit PWM backend not available: {e}")
 
 
 class BackendRegistry:
