@@ -5,12 +5,8 @@ __copyright__ = "Copyright (c) Jason Antman 2025 - released under the terms of t
 import unittest
 from typing import Any, Dict
 from unittest import mock
-import sys
 
-# Mock the Adafruit libraries before importing the backend
-sys.modules["board"] = mock.MagicMock()
-sys.modules["neopixel"] = mock.MagicMock()
-
+# Import the backend - mocks are set up in conftest.py
 from octoprint_ws281x_led_status.backend.adafruit_neopixel_pwm_backend import (
     AdafruitNeoPixelPWMBackend,
     map_strip_type_to_pixel_order,
@@ -173,8 +169,8 @@ class TestAdafruitBackendMethods(unittest.TestCase):
 
     def test_get_pixel_color_rgb(self):
         """Test getting pixel color as RGB tuple."""
-        # Set a color in the buffer
-        self.backend._buffer[5] = (255, 128, 64)
+        # Set a color in the buffer (always 4-tuple internally)
+        self.backend._buffer[5] = (255, 128, 64, 0)
 
         r, g, b, w = self.backend.get_pixel_color_rgb(5)
 
@@ -182,8 +178,8 @@ class TestAdafruitBackendMethods(unittest.TestCase):
 
     def test_get_pixel_color_packed(self):
         """Test getting pixel color as packed integer."""
-        # Set a color in the buffer
-        self.backend._buffer[5] = (255, 128, 64)
+        # Set a color in the buffer (always 4-tuple internally)
+        self.backend._buffer[5] = (255, 128, 64, 0)
 
         color = self.backend.get_pixel_color(5)
 

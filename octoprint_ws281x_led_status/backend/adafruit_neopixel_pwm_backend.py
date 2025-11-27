@@ -137,6 +137,17 @@ class AdafruitNeoPixelPWMBackend(LEDBackend):
         if "pin" not in config:
             raise ValueError("GPIO pin number is required (config['pin'])")
         self._pin = int(config["pin"])
+        
+        # Validate pin number (basic sanity check)
+        if self._pin < 0 or self._pin > 40:
+            raise ValueError(f"Invalid GPIO pin number: {self._pin}. Must be between 0 and 40.")
+        
+        # Validate GPIO pin number (Raspberry Pi common range)
+        if self._pin < 0 or self._pin > 27:
+            raise ValueError(
+                f"Invalid GPIO pin number: {self._pin}. "
+                f"Valid range is 0-27. Common pins: 10, 18, 21"
+            )
 
         # Brightness: convert percentage (0-100) to float (0.0-1.0)
         brightness_percent = int(config.get("brightness", 100))
