@@ -6,20 +6,23 @@ __copyright__ = "Copyright (c) Jason Antman 2025 - released under the terms of t
 Adafruit CircuitPython NeoPixel PWM backend for LED control.
 
 This backend uses the adafruit-circuitpython-neopixel library to control
-NeoPixel LEDs via the PWM interface. This approach works on all Raspberry Pi
-models including the Raspberry Pi 5.
+NeoPixel LEDs via GPIO. This approach works on all Raspberry Pi models
+including the Raspberry Pi 5, which uses PIO (Programmable I/O).
 
 Key features:
 - Works on all Raspberry Pi models (1-5)
 - Supports any GPIO pin (configurable)
 - Supports RGB and RGBW pixel orders
 - Software-based brightness control
-- No special group membership or configuration required
 
 OS Requirements:
-- None! Works out of the box with standard GPIO permissions.
+- Raspberry Pi 5: Requires PIO (Programmable I/O) support
+  - /dev/pio0 device must exist (kernel 6.12+)
+  - User must have write access to /dev/pio0 (requires gpio group membership)
+  - udev rule required: SUBSYSTEM=="*-pio", GROUP="gpio", MODE="0660" in /etc/udev/rules.d/99-com.rules
+  - See: https://github.com/adafruit/Adafruit_Blinka_Raspberry_Pi5_Neopixel
+- Raspberry Pi 1-4: No special requirements beyond standard GPIO access
 - No SPI configuration needed
-- No special group membership needed
 - No core frequency settings needed
 
 IMPORTANT: Wizard test requirements for this backend are defined in:

@@ -333,12 +333,16 @@ class TestWizardBackendAwareTests(unittest.TestCase):
         self.assertIn(api.WIZ_SET_FREQ_MIN, required_tests)
 
     def test_get_required_tests_for_adafruit_pwm(self):
-        """Adafruit PWM backend should require no OS config tests"""
+        """Adafruit PWM backend should require PIO tests"""
+        from octoprint_ws281x_led_status import api
+
         wizard = PluginWizard(pi_model="5")
         required_tests = wizard.get_required_tests_for_backend("adafruit_neopixel_pwm")
 
-        # Should require no tests (works out of the box)
-        self.assertEqual(len(required_tests), 0)
+        # Should require PIO tests
+        self.assertIn(api.WIZ_CHECK_PIO, required_tests)
+        self.assertIn(api.WIZ_ADD_PIO_UDEV_RULE, required_tests)
+        self.assertEqual(len(required_tests), 2)
 
     def test_get_required_tests_unknown_backend(self):
         """Unknown backend should default to rpi_ws281x tests"""
@@ -353,18 +357,25 @@ class TestWizardBackendAwareTests(unittest.TestCase):
 
     @mock.patch("octoprint_ws281x_led_status.wizard.get_registry")
     @mock.patch.object(PluginWizard, "validate")
-    def test_on_api_get_pi5_pwm_no_tests(self, mock_validate, mock_get_registry):
-        """Pi 5 with PWM backend should run no OS config tests"""
+    def test_on_api_get_pi5_pwm_pio_tests(self, mock_validate, mock_get_registry):
+        """Pi 5 with PWM backend should run PIO tests"""
+        from octoprint_ws281x_led_status import api
+
         # Mock registry to recommend Adafruit PWM backend
         mock_registry = mock.Mock()
         mock_registry.list_backends.return_value = ["adafruit_neopixel_pwm"]
         mock_get_registry.return_value = mock_registry
 
+        # Mock validate to return passed=True
+        mock_validate.return_value = {"check": "test", "passed": True, "reason": ""}
+
         wizard = PluginWizard(pi_model="5")
         result = wizard.on_api_get()
 
-        # Should not run any tests
-        mock_validate.assert_not_called()
+        # Should run PIO tests
+        self.assertEqual(mock_validate.call_count, 2)
+        mock_validate.assert_any_call(api.WIZ_CHECK_PIO)
+        mock_validate.assert_any_call(api.WIZ_ADD_PIO_UDEV_RULE)
 
         # Should return backend recommendation
         self.assertIn("backend_recommendation", result)
@@ -374,7 +385,11 @@ class TestWizardBackendAwareTests(unittest.TestCase):
             "adafruit_neopixel_pwm",
         )
 
-        # Should not include test results
+        # Should include PIO test results
+        self.assertIn("pio_available", result)
+        self.assertIn("pio_udev_rule", result)
+
+        # Should not include SPI test results
         self.assertNotIn("adduser_done", result)
         self.assertNotIn("spi_enabled", result)
         self.assertNotIn("spi_buffer_increase", result)
@@ -476,3 +491,138 @@ class TestWizardPiModelPaths(unittest.TestCase):
         self.assertTrue(result["passed"])
         self.assertEqual(result["reason"], "device_exists")
         mock_exists.assert_called_with("/dev/spidev0.0")
+
+
+class TestWizardPIOValidation(unittest.TestCase):
+    """Test PIO device validation for Adafruit backend on Pi 5"""
+
+    @mock.patch("os.path.exists")
+    @mock.patch("os.access")
+    def test_is_pio_available_device_exists_and_writable(
+        self, mock_access, mock_exists
+    ):
+        """PIO device exists and is writable - should pass"""
+        from octoprint_ws281x_led_status import api
+
+        mock_exists.return_value = True
+        mock_access.return_value = True
+
+        result = PluginWizard.is_pio_available()
+
+        self.assertEqual(result["check"], api.WIZ_CHECK_PIO)
+        self.assertTrue(result["passed"])
+        self.assertEqual(result["reason"], "")
+        mock_exists.assert_called_once_with("/dev/pio0")
+        mock_access.assert_called_once_with("/dev/pio0", mock.ANY)
+
+    @mock.patch("os.path.exists")
+    def test_is_pio_available_device_missing(self, mock_exists):
+        """PIO device does not exist - should fail with device_missing"""
+        from octoprint_ws281x_led_status import api
+
+        mock_exists.return_value = False
+
+        result = PluginWizard.is_pio_available()
+
+        self.assertEqual(result["check"], api.WIZ_CHECK_PIO)
+        self.assertFalse(result["passed"])
+        self.assertEqual(result["reason"], "device_missing")
+        mock_exists.assert_called_once_with("/dev/pio0")
+
+    @mock.patch("os.path.exists")
+    @mock.patch("os.access")
+    def test_is_pio_available_device_not_writable(self, mock_access, mock_exists):
+        """PIO device exists but not writable - should fail with not_writable"""
+        from octoprint_ws281x_led_status import api
+
+        mock_exists.return_value = True
+        mock_access.return_value = False
+
+        result = PluginWizard.is_pio_available()
+
+        self.assertEqual(result["check"], api.WIZ_CHECK_PIO)
+        self.assertFalse(result["passed"])
+        self.assertEqual(result["reason"], "not_writable")
+        mock_exists.assert_called_once_with("/dev/pio0")
+        mock_access.assert_called_once_with("/dev/pio0", mock.ANY)
+
+    @mock.patch("os.path.exists")
+    def test_is_pio_udev_rule_set_device_missing(self, mock_exists):
+        """If /dev/pio0 doesn't exist, udev rule check is not required"""
+        from octoprint_ws281x_led_status import api
+
+        mock_exists.return_value = False
+
+        result = PluginWizard.is_pio_udev_rule_set()
+
+        self.assertEqual(result["check"], api.WIZ_ADD_PIO_UDEV_RULE)
+        self.assertTrue(result["passed"])
+        self.assertEqual(result["reason"], "not_required")
+        mock_exists.assert_called_once_with("/dev/pio0")
+
+    @mock.patch("os.access")
+    @mock.patch("os.path.exists")
+    def test_is_pio_udev_rule_set_device_writable(self, mock_exists, mock_access):
+        """If /dev/pio0 is writable, udev rule check passes"""
+        from octoprint_ws281x_led_status import api
+
+        mock_exists.return_value = True
+        mock_access.return_value = True
+
+        result = PluginWizard.is_pio_udev_rule_set()
+
+        self.assertEqual(result["check"], api.WIZ_ADD_PIO_UDEV_RULE)
+        self.assertTrue(result["passed"])
+        self.assertEqual(result["reason"], "")
+        mock_exists.assert_called_once_with("/dev/pio0")
+        mock_access.assert_called_once_with("/dev/pio0", mock.ANY)
+
+    @mock.patch("builtins.open", mock.mock_open(read_data='SUBSYSTEM=="*-pio", GROUP="gpio", MODE="0660"\n'))
+    @mock.patch("os.access")
+    @mock.patch("os.path.exists")
+    def test_is_pio_udev_rule_set_rule_exists_needs_reboot(
+        self, mock_exists, mock_access
+    ):
+        """If rule file exists but device not writable, needs reboot"""
+        from octoprint_ws281x_led_status import api
+
+        mock_exists.return_value = True
+        mock_access.return_value = False
+
+        result = PluginWizard.is_pio_udev_rule_set()
+
+        self.assertEqual(result["check"], api.WIZ_ADD_PIO_UDEV_RULE)
+        self.assertTrue(result["passed"])
+        self.assertEqual(result["reason"], "needs_reboot")
+
+    @mock.patch("builtins.open", mock.mock_open(read_data="# No PIO rule here\n"))
+    @mock.patch("os.access")
+    @mock.patch("os.path.exists")
+    def test_is_pio_udev_rule_set_rule_not_found(self, mock_exists, mock_access):
+        """If device exists but not writable and no rule, should fail"""
+        from octoprint_ws281x_led_status import api
+
+        mock_exists.return_value = True
+        mock_access.return_value = False
+
+        result = PluginWizard.is_pio_udev_rule_set()
+
+        self.assertEqual(result["check"], api.WIZ_ADD_PIO_UDEV_RULE)
+        self.assertFalse(result["passed"])
+        self.assertEqual(result["reason"], "failed")
+
+    @mock.patch("builtins.open", side_effect=FileNotFoundError)
+    @mock.patch("os.access")
+    @mock.patch("os.path.exists")
+    def test_is_pio_udev_rule_set_file_missing(self, mock_exists, mock_access, mock_open):
+        """If udev rules file doesn't exist, rule is not set"""
+        from octoprint_ws281x_led_status import api
+
+        mock_exists.return_value = True
+        mock_access.return_value = False
+
+        result = PluginWizard.is_pio_udev_rule_set()
+
+        self.assertEqual(result["check"], api.WIZ_ADD_PIO_UDEV_RULE)
+        self.assertFalse(result["passed"])
+        self.assertEqual(result["reason"], "failed")

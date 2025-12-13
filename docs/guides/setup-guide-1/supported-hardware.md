@@ -43,7 +43,7 @@ The plugin now uses a flexible LED backend system to support all hardware versio
 You can select your backend in the plugin settings during initial setup. Both backends support all plugin features identically.
 
 {% hint style="info" %}
-For Raspberry Pi 5 users: Select the "Adafruit CircuitPython NeoPixel (PWM)" backend in plugin settings. No special OS configuration is required - just select your GPIO pin and you're ready to go!
+For Raspberry Pi 5 users: Select the "Adafruit CircuitPython NeoPixel (PWM)" backend in plugin settings. Requires kernel 6.12+ for PIO (Programmable I/O) support. The setup wizard will guide you through configuring PIO device access (user must be in gpio group and udev rules must be set).
 {% endhint %}
 
 **Note:** Only Raspberry Pi devices are supported. The plugin **will not load** if it is not running on a Raspberry Pi, even if it does install.

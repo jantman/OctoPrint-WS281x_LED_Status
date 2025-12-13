@@ -42,7 +42,7 @@ Setting up the plugin couldn't be easier! There are 3 main steps, with configura
 
 Follow the detailed [setup guide](https://cp2004.gitbook.io/ws281x-led-status/guides/setup-guide-1) in the documentation to get up and running.
 
-**Note for Raspberry Pi 5 users:** This plugin now supports Pi 5 using the Adafruit CircuitPython NeoPixel (PWM) backend. See the documentation for setup instructions specific to Pi 5.
+**Note for Raspberry Pi 5 users:** This plugin now supports Pi 5 using the Adafruit CircuitPython NeoPixel (PWM) backend. Requires kernel 6.12+ for PIO support. See the documentation for setup instructions specific to Pi 5.
 
 ## Raspberry Pi 5 Support
 
@@ -54,15 +54,17 @@ This plugin now supports **all Raspberry Pi models including Pi 5** through a fl
 **Key features:**
 - Multiple backend support with easy selection in plugin settings
 - Pi 5 backend supports any GPIO pin (not limited to specific pins)
-- No special OS configuration required for Pi 5 (no SPI setup needed)
+- Simplified OS configuration for Pi 5 (no SPI setup needed, but PIO support required)
 - All plugin features work identically with both backends
 - Automatic dependency installation via OctoPrint Plugin Manager
 
 **Quick setup for Pi 5:**
-1. Install plugin normally through Plugin Manager
-2. In plugin settings, select "Adafruit CircuitPython NeoPixel (PWM)" backend
-3. Configure your GPIO pin (default: 18) and pixel order (usually GRB)
-4. Restart OctoPrint and you're ready!
+1. Ensure your Raspberry Pi OS has kernel 6.12+ for PIO support
+2. Install plugin normally through Plugin Manager
+3. In plugin settings, select "Adafruit CircuitPython NeoPixel (PWM)" backend
+4. Follow the setup wizard to configure PIO device access (adds user to gpio group and sets udev rules)
+5. Configure your GPIO pin (default: 18) and pixel order (usually GRB)
+6. Reboot and you're ready!
 
 ## Getting help
 

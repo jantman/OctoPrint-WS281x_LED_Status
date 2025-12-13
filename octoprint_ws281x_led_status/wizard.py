@@ -28,11 +28,11 @@ BACKEND_TEST_REQUIREMENTS = {
     },
     "adafruit_neopixel_pwm": {
         "required_tests": [
-            # No special OS configuration needed for PWM backend
-            # GPIO access is handled by standard permissions
+            api.WIZ_CHECK_PIO,  # PIO device must exist and be writable on Pi 5
+            api.WIZ_ADD_PIO_UDEV_RULE,  # udev rule needed if PIO device not writable
         ],
-        "description": "Adafruit PWM backend works out of the box on Pi 5 with standard GPIO access",
-        "group": None,  # No special group required (standard user permissions sufficient)
+        "description": "Adafruit PWM backend requires PIO (Programmable I/O) support on Pi 5",
+        "group": "gpio",  # User must be in gpio group for /dev/pio0 access
     },
 }
 
@@ -215,6 +215,10 @@ class PluginWizard:
             result["core_freq_set"] = self.validate(api.WIZ_SET_CORE_FREQ)
         if api.WIZ_SET_FREQ_MIN in required_tests:
             result["core_freq_min_set"] = self.validate(api.WIZ_SET_FREQ_MIN)
+        if api.WIZ_CHECK_PIO in required_tests:
+            result["pio_available"] = self.validate(api.WIZ_CHECK_PIO)
+        if api.WIZ_ADD_PIO_UDEV_RULE in required_tests:
+            result["pio_udev_rule"] = self.validate(api.WIZ_ADD_PIO_UDEV_RULE)
 
         return result
 
@@ -225,6 +229,8 @@ class PluginWizard:
             api.WIZ_INCREASE_BUFFER: self.is_spi_buffer_increased,
             api.WIZ_SET_CORE_FREQ: self.is_core_freq_set,
             api.WIZ_SET_FREQ_MIN: self.is_core_freq_min_set,
+            api.WIZ_CHECK_PIO: self.is_pio_available,
+            api.WIZ_ADD_PIO_UDEV_RULE: self.is_pio_udev_rule_set,
         }
         try:
             result = validators[cmd]()
@@ -361,6 +367,90 @@ class PluginWizard:
             }
         return result
 
+    @staticmethod
+    def is_pio_available():
+        """
+        Check if PIO (Programmable I/O) device exists and is writable.
+
+        PIO support is required for Adafruit NeoPixel on Raspberry Pi 5.
+        Returns different failure reasons:
+        - "device_missing": /dev/pio0 does not exist (kernel/firmware too old)
+        - "not_writable": /dev/pio0 exists but user cannot write to it
+        - "": Passed - device exists and is writable
+
+        See: https://github.com/adafruit/Adafruit_Blinka_Raspberry_Pi5_Neopixel
+        """
+        pio_device = "/dev/pio0"
+
+        # Check if device exists
+        if not os.path.exists(pio_device):
+            return {
+                "check": api.WIZ_CHECK_PIO,
+                "passed": False,
+                "reason": "device_missing",
+            }
+
+        # Check if device is writable by current user
+        if not os.access(pio_device, os.W_OK):
+            return {
+                "check": api.WIZ_CHECK_PIO,
+                "passed": False,
+                "reason": "not_writable",
+            }
+
+        return {"check": api.WIZ_CHECK_PIO, "passed": True, "reason": ""}
+
+    @staticmethod
+    def is_pio_udev_rule_set():
+        """
+        Check if udev rule for PIO device is configured.
+
+        The udev rule should set /dev/pio0 to be writable by the gpio group.
+        Expected rule: SUBSYSTEM=="*-pio", GROUP="gpio", MODE="0660"
+
+        This check looks for the rule in /etc/udev/rules.d/99-com.rules
+
+        See: https://github.com/adafruit/Adafruit_Blinka_Raspberry_Pi5_Neopixel
+        """
+        udev_rules_file = "/etc/udev/rules.d/99-com.rules"
+        expected_rule = 'SUBSYSTEM=="*-pio", GROUP="gpio", MODE="0660"'
+
+        # If /dev/pio0 doesn't exist, udev rule isn't relevant yet
+        if not os.path.exists("/dev/pio0"):
+            return {
+                "check": api.WIZ_ADD_PIO_UDEV_RULE,
+                "passed": True,
+                "reason": "not_required",  # Can't set rule if device doesn't exist
+            }
+
+        # If /dev/pio0 is already writable, rule might already be in place or not needed
+        if os.access("/dev/pio0", os.W_OK):
+            return {
+                "check": api.WIZ_ADD_PIO_UDEV_RULE,
+                "passed": True,
+                "reason": "",  # Device is writable, rule working or not needed
+            }
+
+        # Device exists but not writable - check if rule is configured
+        try:
+            with open(udev_rules_file, encoding="utf-8") as file:
+                for line in file:
+                    if "*-pio" in line and "gpio" in line:
+                        return {
+                            "check": api.WIZ_ADD_PIO_UDEV_RULE,
+                            "passed": True,
+                            "reason": "needs_reboot",  # Rule exists but needs reboot to apply
+                        }
+        except FileNotFoundError:
+            pass  # File doesn't exist, rule not set
+
+        # Rule not found
+        return {
+            "check": api.WIZ_ADD_PIO_UDEV_RULE,
+            "passed": False,
+            "reason": "failed",
+        }
+
     def run_wizard_command(self, cmd, data):
         config_txt = self.get_config_txt_path()
         cmdline_txt = self.get_cmdline_txt_path()
@@ -400,6 +490,13 @@ class PluginWizard:
                 "-i",
                 "$ s/$/ spidev.bufsiz=32768/",
                 cmdline_txt,
+            ],
+            api.WIZ_ADD_PIO_UDEV_RULE: [
+                "sudo",
+                "-S",
+                "bash",
+                "-c",
+                'echo \'SUBSYSTEM=="*-pio", GROUP="gpio", MODE="0660"\' >> /etc/udev/rules.d/99-com.rules',
             ],
         }
         sys_command = command_to_system[cmd]
